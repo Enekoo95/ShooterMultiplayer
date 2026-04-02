@@ -23,7 +23,6 @@ public class LobbyManager : MonoBehaviour
         public string RoomName;
         public int CurrentPlayers;
         public int MaxPlayers;
-        public SessionProperties Properties;
     }
 
     private void Awake()
@@ -65,15 +64,11 @@ public class LobbyManager : MonoBehaviour
         {
             currentSessionName = roomName;
 
-            // Configurar propiedades de la sala
-            var sessionProperties = new SessionProperties();
-            sessionProperties.Set("RoomName", roomName);
-            sessionProperties.Set("MaxPlayers", maxPlayers);
-
-            var args = new StartGameArgs();
-            args.SessionName = roomName;
-            args.PlayerCount = maxPlayers;
-            args.SessionProperties = sessionProperties;
+            var args = new StartGameArgs()
+            {
+                SessionName = roomName,
+                PlayerCount = maxPlayers,
+            };
 
             var result = await networkRunner.StartGame(args);
 

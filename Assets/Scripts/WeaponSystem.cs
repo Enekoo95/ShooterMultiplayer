@@ -49,13 +49,10 @@ public class WeaponSystem : NetworkBehaviour
 
     private WeaponStats currentWeapon;
     private PlayerController playerController;
-    private PhotonView photonView;
-    private Rigidbody rb;
 
     private void Start()
     {
         playerController = GetComponent<PlayerController>();
-        photonView = GetComponent<PhotonView>();
         shootOrigin = GetComponentInChildren<Camera>()?.transform ?? transform;
 
         // Inicializar arma base
@@ -147,29 +144,21 @@ public class WeaponSystem : NetworkBehaviour
             PlayerController targetPlayer = hit.collider.GetComponent<PlayerController>();
             if (targetPlayer && targetPlayer != playerController)
             {
-                // Notificar al servidor que hemos disparado
-                RPC_RequestShot(hit.point, hit.normal, targetPlayer.GetComponent<NetworkObject>().Id);
+                // Aplicar daño directamente y registrar kill local para debugging; en red, el GameState debe validar
+                targetPlayer.TakeDamage(currentWeapon.damage);
+                if (GameState.Instance != null)
+                {
+                    GameState.Instance.RecordKill(Runner.LocalPlayer, targetPlayer.Object.InputAuthority, currentWeapon.weaponName);
+                }
             }
         }
         else
         {
             Debug.Log("[WeaponSystem] Disparo fallido");
-            RPC_RequestShot(shootOrigin.position + shootOrigin.forward * shootRange, Vector3.zero, default);
         }
 
         // Efecto visual
         OnShot();
-    }
-
-    [Rpc]
-    private void RPC_RequestShot(Vector3 hitPoint, Vector3 hitNormal, NetworkId targetId)
-    {
-        // MasterClient valida el impacto
-        if (!HasInputAuthority)
-        {
-            // Otros clientes ven el disparo
-            Debug.Log($"[WeaponSystem] Disparo visto en {hitPoint}");
-        }
     }
 
     /// <summary>
@@ -264,26 +253,3 @@ public class WeaponSystem : NetworkBehaviour
     }
 }
 
-/// <summary>
-/// Prefab de pickup de arma en el mundo.
-/// </summary>
-public class WeaponPickup : MonoBehaviour
-{
-    [SerializeField] private WeaponSystem.WeaponStats weaponStats;
-    [SerializeField] private float rotationSpeed = 50f;
-
-    private void OnTriggerEnter(Collider other)
-    {
-        WeaponSystem weaponSystem = other.GetComponent<WeaponSystem>();
-        if (weaponSystem)
-        {
-            weaponSystem.PickupWeapon(weaponStats);
-            Destroy(gameObject);
-        }
-    }
-
-    private void Update()
-    {
-        transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime);
-    }
-}
