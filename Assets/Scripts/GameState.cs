@@ -1,6 +1,7 @@
 using UnityEngine;
 using Fusion;
 using System.Collections.Generic;
+using Unity.Collections;
 
 /// <summary>
 /// Estado global del juego sincronizado en red.
@@ -12,8 +13,6 @@ public class GameState : NetworkBehaviour
     [System.Serializable]
     public struct PlayerStats : INetworkStruct
     {
-        public NetworkId PlayerId;
-        public FixedString64Bytes PlayerName;
         public int Kills;
         public int Deaths;
         public int Score;
@@ -23,6 +22,9 @@ public class GameState : NetworkBehaviour
     }
 
     [Networked] public NetworkDictionary<PlayerRef, PlayerStats> PlayerStatsDictionary => default;
+
+    // Nombres se guardan localmente ya que Fusion no admite FixedString en structs weaved
+    private Dictionary<PlayerRef, string> playerNames = new Dictionary<PlayerRef, string>();
     [Networked] public int TimeRemaining { get; set; }
     [Networked] public int WinnerScore { get; set; }
     [Networked] public bool IsGameActive { get; set; }
@@ -78,8 +80,6 @@ public class GameState : NetworkBehaviour
 
         var stats = new PlayerStats
         {
-            PlayerId = player.PlayerId,
-            PlayerName = playerName,
             Kills = 0,
             Deaths = 0,
             Score = 0,
@@ -90,6 +90,7 @@ public class GameState : NetworkBehaviour
 
         PlayerStatsDictionary.Set(player, stats);
         playerStreaks[player] = 0;
+        playerNames[player] = playerName;
 
         Debug.Log($"[GameState] Jugador registrado: {playerName}");
     }
@@ -121,7 +122,7 @@ public class GameState : NetworkBehaviour
             PlayerStatsDictionary.Set(sniffer, killerStats);
             playerStreaks[sniffer]++;
 
-            Debug.Log($"[GameState] {killerStats.PlayerName} elimina. Racha: {killerStats.KillStreak}");
+            Debug.Log($"[GameState] {GetPlayerName(sniffer)} elimina. Racha: {killerStats.KillStreak}");
         }
 
         if (PlayerStatsDictionary.TryGet(victim, out var victimStats))
@@ -179,7 +180,7 @@ public class GameState : NetworkBehaviour
             stats.IsAlive = true;
             PlayerStatsDictionary.Set(player, stats);
 
-            Debug.Log($"[GameState] {stats.PlayerName} ha reaparec ido");
+            Debug.Log($"[GameState] {GetPlayerName(player)} ha reaparecido");
         }
     }
 
@@ -195,16 +196,24 @@ public class GameState : NetworkBehaviour
         return 0;
     }
 
+    public string GetPlayerName(PlayerRef player)
+    {
+        if (playerNames.TryGetValue(player, out var name))
+            return name;
+        return "Jugador" + player.PlayerId;
+    }
+
     /// <summary>
     /// Verifica si hay ganador por puntuación.
     /// </summary>
     private bool HasWinner()
     {
-        foreach (var kvp in PlayerStatsDictionary.Values)
+        foreach (var entry in PlayerStatsDictionary)
         {
-            if (kvp.Score >= MAX_SCORE)
+            var stats = entry.Value;
+            if (stats.Score >= MAX_SCORE)
             {
-                WinnerScore = kvp.Score;
+                WinnerScore = stats.Score;
                 return true;
             }
         }
@@ -243,9 +252,9 @@ public class GameState : NetworkBehaviour
     public List<PlayerStats> GetSortedStats()
     {
         var sorted = new List<PlayerStats>();
-        foreach (var kvp in PlayerStatsDictionary.Values)
+        foreach (var entry in PlayerStatsDictionary)
         {
-            sorted.Add(kvp);
+            sorted.Add(entry.Value);
         }
         sorted.Sort((a, b) => b.Score.CompareTo(a.Score));
         return sorted;
