@@ -10,7 +10,13 @@ public class NetworkManager : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     private NetworkRunner GetRunner()
@@ -32,9 +38,8 @@ public class NetworkManager : MonoBehaviour
 
     public async Task StartHost(string roomName)
     {
-        var runner = GetRunner();
-
-        await runner.StartGame(new StartGameArgs()
+        NetworkRunner r = GetRunner();
+        await r.StartGame(new StartGameArgs()
         {
             GameMode = GameMode.Host,
             SessionName = roomName,
