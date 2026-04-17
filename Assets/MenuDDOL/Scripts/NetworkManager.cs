@@ -6,7 +6,7 @@ public class NetworkManager : MonoBehaviour
 {
     public static NetworkManager Instance;
 
-    private NetworkRunner runner;
+    public NetworkRunner runner;
 
     private void Awake()
     {

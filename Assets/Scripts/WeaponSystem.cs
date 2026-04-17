@@ -57,10 +57,15 @@ public class WeaponSystem : NetworkBehaviour
 
         // Inicializar arma base
         currentWeapon = DeepCopyWeapon(baseWeapon);
-        CurrentAmmo = currentWeapon.ammo;
 
         // Inicializar armas especiales (ejemplo)
         InitializeSpecialWeapons();
+    }
+
+    public override void Spawned()
+    {
+        // Aquí sí se pueden acceder las propiedades networked
+        CurrentAmmo = currentWeapon.ammo;
     }
 
     private void InitializeSpecialWeapons()
