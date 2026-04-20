@@ -1,67 +1,146 @@
 using UnityEngine;
 using Fusion;
 
-/// <summary>
-/// Gestiona el sistema de rachas de eliminaciones.
-/// Otorga recompensas especiales por rachas consecutivas.
-/// </summary>
 public class StreakSystem : NetworkBehaviour
 {
-    [System.Serializable]
-    public class StreakReward
-    {
-        public int killThreshold;
-        public string rewardName;
-        public GameObject rewardPrefab;
-        public Vector3 spawnOffset = Vector3.up * 2;
-    }
+    [Networked] public bool HasGrenade { get; set; }
+    [Networked] public bool HasAirStrike { get; set; }
+    [Networked] public bool HasTurret { get; set; }
 
-    [SerializeField] private StreakReward[] streakRewards = new StreakReward[]
-    {
-        new StreakReward { killThreshold = 3, rewardName = "Grenade", spawnOffset = Vector3.up },
-        new StreakReward { killThreshold = 5, rewardName = "Air Strike", spawnOffset = Vector3.up * 3 },
-        new StreakReward { killThreshold = 10, rewardName = "Turret", spawnOffset = Vector3.up * 2 }
-    };
+    [SerializeField] private GameObject grenadePrefab;
+    [SerializeField] private GameObject airStrikePrefab;
+    [SerializeField] private GameObject turretPrefab;
+    [SerializeField] private GameObject airStrikeIndicatorPrefab; // NUEVO
+
+    private int lastCheckedStreak = 0;
+    private GameObject activeIndicator = null; // NUEVO
+    private bool isSelectingAirStrike = false; // NUEVO
 
     public override void FixedUpdateNetwork()
     {
         if (!HasInputAuthority || GameState.Instance == null)
             return;
 
-        // Verificar rachas para todos los jugadores
-        foreach (var player in Runner.ActivePlayers)
-        {
-            int streak = GameState.Instance.GetKillStreak(player);
+        int currentStreak = GameState.Instance.GetKillStreak(Runner.LocalPlayer);
 
-            foreach (var reward in streakRewards)
-            {
-                if (streak == reward.killThreshold)
-                {
-                    GrantReward(player, reward);
-                    break;
-                }
-            }
+        if (currentStreak == lastCheckedStreak)
+            return;
+
+        lastCheckedStreak = currentStreak;
+
+        if (currentStreak >= 3 && !HasGrenade)
+        {
+            HasGrenade = true;
+            RPC_NotifyReward("Granada desbloqueada! Pulsa Z");
+        }
+        if (currentStreak >= 5 && !HasAirStrike)
+        {
+            HasAirStrike = true;
+            RPC_NotifyReward("Ataque Aéreo desbloqueado! Pulsa X");
+        }
+        if (currentStreak >= 10 && !HasTurret)
+        {
+            HasTurret = true;
+            RPC_NotifyReward("Torreta desbloqueada! Pulsa C");
         }
     }
 
-    private void GrantReward(PlayerRef player, StreakReward reward)
+    private void Update()
     {
-        Debug.Log($"[StreakSystem] {player.PlayerId} obtiene {reward.rewardName} por {reward.killThreshold} kills!");
+        if (!HasInputAuthority) return;
 
-        // Spawn reward cerca del jugador
-        if (reward.rewardPrefab != null)
+        if (Input.GetKeyDown(KeyCode.Z) && HasGrenade)
+            UseGrenade();
+
+        if (Input.GetKeyDown(KeyCode.X) && HasAirStrike && !isSelectingAirStrike)
+            StartAirStrikeSelection();
+
+        if (Input.GetKeyDown(KeyCode.C) && HasTurret)
+            UseTurret();
+
+        if (isSelectingAirStrike)
+            UpdateAirStrikeIndicator();
+    }
+
+    private void UseGrenade()
+    {
+        if (grenadePrefab == null) return;
+        Vector3 spawnPos = transform.position + transform.forward * 2f + Vector3.up;
+        Runner.Spawn(grenadePrefab, spawnPos, transform.rotation, Runner.LocalPlayer);
+        HasGrenade = false;
+        lastCheckedStreak = 0;
+    }
+
+    private void StartAirStrikeSelection()
+    {
+        isSelectingAirStrike = true;
+        if (airStrikeIndicatorPrefab != null)
+            activeIndicator = Instantiate(airStrikeIndicatorPrefab);
+    }
+
+    private void UpdateAirStrikeIndicator()
+    {
+        // Mover el indicador donde apunta el cursor
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray, out RaycastHit hit, 200f))
         {
-            // Buscar posición del jugador
-            var playerObjects = FindObjectsOfType<NetworkObject>();
-            foreach (var obj in playerObjects)
-            {
-                if (obj.HasInputAuthority && obj.InputAuthority == player)
-                {
-                    Vector3 spawnPos = obj.transform.position + reward.spawnOffset;
-                    Runner.Spawn(reward.rewardPrefab, spawnPos, Quaternion.identity);
-                    break;
-                }
-            }
+            if (activeIndicator != null)
+                activeIndicator.transform.position = hit.point + Vector3.up * 0.1f;
+
+            // Confirmar con clic izquierdo
+            if (Input.GetMouseButtonDown(0))
+                ConfirmAirStrike(hit.point);
         }
+
+        // Cancelar con clic derecho
+        if (Input.GetMouseButtonDown(1))
+            CancelAirStrike();
+    }
+
+    private void ConfirmAirStrike(Vector3 targetPos)
+    {
+        if (airStrikePrefab == null) return;
+
+        Vector3 spawnPos = new Vector3(targetPos.x, targetPos.y + 30f, targetPos.z);
+        var obj = Runner.Spawn(airStrikePrefab, spawnPos, Quaternion.identity, Runner.LocalPlayer);
+        obj.GetComponent<AirStrike>().Init(targetPos);
+
+        HasAirStrike = false;
+        lastCheckedStreak = 0;
+        CancelAirStrike();
+    }
+
+    private void CancelAirStrike()
+    {
+        isSelectingAirStrike = false;
+        if (activeIndicator != null)
+        {
+            Destroy(activeIndicator);
+            activeIndicator = null;
+        }
+    }
+
+    private void UseTurret()
+    {
+        if (turretPrefab == null) return;
+        Vector3 spawnPos = transform.position + transform.forward * 2f;
+        Runner.Spawn(turretPrefab, spawnPos, transform.rotation, Runner.LocalPlayer);
+        HasTurret = false;
+        lastCheckedStreak = 0;
+    }
+
+    public void OnPlayerDied()
+    {
+        HasGrenade = false;
+        HasAirStrike = false;
+        HasTurret = false;
+        lastCheckedStreak = 0;
+        CancelAirStrike();
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    private void RPC_NotifyReward(string message)
+    {
+        Debug.Log($"[StreakSystem] {message}");
     }
 }

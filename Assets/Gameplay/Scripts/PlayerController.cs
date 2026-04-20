@@ -26,7 +26,7 @@ public class PlayerController : NetworkBehaviour
         CurrentHealth = 100f;
         IsAlive = true;
 
-        // Busca explÌcitamente en hijos
+        // Busca explÔøΩcitamente en hijos
         characterController = GetComponentInChildren<CharacterController>();
         cameraHolder = GetComponentInChildren<Camera>()?.transform.parent;
 
@@ -59,7 +59,7 @@ public class PlayerController : NetworkBehaviour
         }
         else
         {
-            Debug.LogWarning($"[PlayerController] GetInput fallÛ. HasInputAuthority: {HasInputAuthority}");
+            Debug.LogWarning($"[PlayerController] GetInput fallÔøΩ. HasInputAuthority: {HasInputAuthority}");
         }
     }
 
@@ -114,18 +114,21 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    private void Die()
-    {
-        IsAlive = false;
-        if (characterController != null)
-            characterController.enabled = false;
+private void Die()
+{
+    IsAlive = false;
+    if (characterController != null)
+        characterController.enabled = false;
 
-        if (gameState != null)
-            gameState.RecordKill(Runner.LocalPlayer, Runner.LocalPlayer, "Suicide");
+    if (gameState != null)
+        gameState.RecordKill(Runner.LocalPlayer, Runner.LocalPlayer, "Suicide");
 
-        if (HasInputAuthority)
-            Cursor.lockState = CursorLockMode.None;
-    }
+    // A√ëADE ESTA L√çNEA:
+    GetComponent<StreakSystem>()?.OnPlayerDied();
+
+    if (HasInputAuthority)
+        Cursor.lockState = CursorLockMode.None;
+}
 
     public void Respawn(Vector3 spawnPosition)
     {
