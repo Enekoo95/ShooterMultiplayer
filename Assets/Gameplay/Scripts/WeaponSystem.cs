@@ -26,8 +26,19 @@ public class WeaponSystem : NetworkBehaviour
     }
 
     [SerializeField] private Transform shootOrigin; // Posición de disparo (cámara o arma)
+    [SerializeField] private Transform weaponHolder; // Contenedor del modelo de arma
+    [SerializeField] private GameObject weaponPrefab; // Prefab visual del arma
+    [SerializeField] private Transform weaponMuzzlePoint; // Punto de salida del disparo en el arma
     [SerializeField] private float shootRange = 100f;
     [SerializeField] private LayerMask shootLayer;
+
+    // Efectos visuales de disparo
+    [SerializeField] private AudioClip shotSound;
+    [SerializeField] private float recoilAmount = 0.05f; // Magnitud del retroceso
+    [SerializeField] private float recoilDuration = 0.1f; // Duración del retroceso
+    [SerializeField] private bool enableMuzzleFlash = true;
+    [SerializeField] private bool enableShotSound = true;
+    [SerializeField] private bool enableCameraRecoil = true;
 
     // Armas disponibles
     [SerializeField] private WeaponStats baseWeapon = new WeaponStats
@@ -49,18 +60,63 @@ public class WeaponSystem : NetworkBehaviour
 
     private WeaponStats currentWeapon;
     private PlayerController playerController;
+    private Camera mainCamera;
+    private AudioSource audioSource;
+    private Vector3 cameraOriginalPos;
 
     private void Start()
     {
-        playerController = GetComponent<PlayerController>();
-        shootOrigin = GetComponentInChildren<Camera>()?.transform ?? transform;
+        playerController = GetComponentInParent<PlayerController>();
+        mainCamera = transform.root.GetComponentInChildren<Camera>();
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        if (mainCamera != null)
+        {
+            cameraOriginalPos = mainCamera.transform.localPosition;
+        }
+
+        // Instanciar modelo del arma si está configurado
+        if (weaponPrefab != null && weaponHolder != null)
+        {
+            GameObject weaponInstance = Instantiate(weaponPrefab, weaponHolder);
+            weaponInstance.transform.localPosition = Vector3.zero;
+            weaponInstance.transform.localRotation = Quaternion.identity;
+
+            if (weaponMuzzlePoint == null)
+            {
+                Transform foundMuzzle = weaponInstance.transform.Find("MuzzlePoint");
+                if (foundMuzzle != null)
+                {
+                    weaponMuzzlePoint = foundMuzzle;
+                }
+            }
+        }
+
+        // Preferir el punto de salida del arma cuando exista
+        if (weaponMuzzlePoint != null)
+        {
+            shootOrigin = weaponMuzzlePoint;
+        }
+        else if (shootOrigin == null)
+        {
+            shootOrigin = GetComponentInChildren<Camera>()?.transform ?? transform;
+        }
 
         // Inicializar arma base
         currentWeapon = DeepCopyWeapon(baseWeapon);
-        CurrentAmmo = currentWeapon.ammo;
 
         // Inicializar armas especiales (ejemplo)
         InitializeSpecialWeapons();
+    }
+
+    public override void Spawned()
+    {
+        // Aquí sí se pueden acceder las propiedades networked
+        CurrentAmmo = currentWeapon.ammo;
     }
 
     private void InitializeSpecialWeapons()
@@ -101,23 +157,17 @@ public class WeaponSystem : NetworkBehaviour
         if (!HasInputAuthority || !playerController.IsAlive)
             return;
 
-        // Cambio de armas
-        if (Input.GetKeyDown(KeyCode.E))
-        {
+        if (!GetInput(out NetworkInputData input))
+            return;
+
+        if (input.CycleWeapon)
             CycleWeapon();
-        }
 
-        // Disparar
-        if (Input.GetMouseButton(0) && CanShoot())
-        {
+        if (input.Shoot && CanShoot())
             Shoot();
-        }
 
-        // Recargar
-        if (Input.GetKeyDown(KeyCode.R))
-        {
+        if (input.Reload)
             Reload();
-        }
     }
 
     /// <summary>
@@ -225,8 +275,90 @@ public class WeaponSystem : NetworkBehaviour
     /// </summary>
     private void OnShot()
     {
-        // TODO: Reproducir sonido, flash de cañón, recoil de cámara, etc.
         Debug.Log($"[WeaponSystem] {currentWeapon.weaponName} dispara - Munición: {CurrentAmmo}/{currentWeapon.maxAmmo}");
+        
+        // Reproducir sonido de disparo
+        PlayShotSound();
+        
+        // Mostrar muzzle flash
+        PlayMuzzleFlash();
+        
+        // Aplicar recoil de cámara
+        if (mainCamera != null)
+        {
+            ApplyCameraRecoil();
+        }
+    }
+
+    /// <summary>
+    /// Reproduce el sonido de disparo.
+    /// </summary>
+    private void PlayShotSound()
+    {
+        if (!enableShotSound || audioSource == null || shotSound == null)
+            return;
+
+        audioSource.PlayOneShot(shotSound, 1f);
+    }
+
+    /// <summary>
+    /// Muestra un efecto de muzzle flash en la posición de disparo.
+    /// </summary>
+    private void PlayMuzzleFlash()
+    {
+        if (!enableMuzzleFlash)
+            return;
+
+        // Crear efecto de muzzle flash dinámicamente
+        MuzzleFlashEffect.CreateMuzzleFlash(shootOrigin.position, shootOrigin.rotation, 0.1f);
+    }
+
+    /// <summary>
+    /// Aplica un retroceso suave a la cámara.
+    /// </summary>
+    private void ApplyCameraRecoil()
+    {
+        // Calcular retroceso aleatorio en pequeña cantidad
+        Vector3 recoilDirection = new Vector3(
+            Random.Range(-recoilAmount, recoilAmount),
+            Random.Range(-recoilAmount, recoilAmount),
+            -recoilAmount * 0.5f // Retroceso hacia atrás más suave
+        );
+        
+        // Guardar posición original y aplicar recoil suavemente
+        StartCoroutine(ApplyRecoilCoroutine(recoilDirection));
+    }
+
+    /// <summary>
+    /// Corrutina para aplicar retroceso suave de cámara.
+    /// </summary>
+    private System.Collections.IEnumerator ApplyRecoilCoroutine(Vector3 recoilDirection)
+    {
+        Vector3 originalPos = mainCamera.transform.localPosition;
+        Vector3 targetPos = originalPos + recoilDirection;
+        float elapsedTime = 0f;
+
+        // Fase 1: Aplicar retroceso (primera mitad del tiempo)
+        while (elapsedTime < recoilDuration * 0.5f)
+        {
+            elapsedTime += Time.deltaTime;
+            float t = elapsedTime / (recoilDuration * 0.5f);
+            mainCamera.transform.localPosition = Vector3.Lerp(originalPos, targetPos, t);
+            yield return null;
+        }
+
+        // Fase 2: Recuperarse (segunda mitad del tiempo)
+        elapsedTime = 0f;
+        while (elapsedTime < recoilDuration * 0.5f)
+        {
+            elapsedTime += Time.deltaTime;
+            float t = elapsedTime / (recoilDuration * 0.5f);
+            mainCamera.transform.localPosition = Vector3.Lerp(targetPos, originalPos, t);
+            yield return null;
+        }
+
+        // Asegurar que vuelva a posición original
+        mainCamera.transform.localPosition = originalPos;
     }
 
     public WeaponStats GetCurrentWeapon()

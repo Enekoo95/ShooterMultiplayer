@@ -1,10 +1,6 @@
 using UnityEngine;
 using Fusion;
 
-/// <summary>
-/// Controlador del jugador: movimiento, cÃ¡mara (FPS) y sincronizaciÃ³n en red.
-/// Cada jugador tiene autoridad sobre su propio PlayerController.
-/// </summary>
 public class PlayerController : NetworkBehaviour
 {
     [SerializeField] private float moveSpeed = 5f;
@@ -18,30 +14,30 @@ public class PlayerController : NetworkBehaviour
 
     private Vector3 currentVelocity = Vector3.zero;
     private float gravity = -9.81f;
-    private bool isGrounded = false;
-
-    private Vector2 moveInput = Vector2.zero;
     private float verticalLookRotation = 0f;
 
-    [Networked] public float CurrentHealth { get; set; } = 100f;
-    [Networked] public bool IsAlive { get; set; } = true;
+    [Networked] public float CurrentHealth { get; set; }
+    [Networked] public bool IsAlive { get; set; }
 
     private GameState gameState;
 
-    private void Start()
+    public override void Spawned()
     {
-        if (!characterController)
-            characterController = GetComponent<CharacterController>();
+        CurrentHealth = 100f;
+        IsAlive = true;
 
-        if (!cameraHolder)
-            cameraHolder = GetComponentInChildren<Camera>()?.transform;
+        // Busca explícitamente en hijos
+        characterController = GetComponentInChildren<CharacterController>();
+        cameraHolder = GetComponentInChildren<Camera>()?.transform.parent;
 
         gameState = GameState.Instance;
 
+        Debug.Log($"[PlayerController] Spawned - HasInputAuthority: {HasInputAuthority}");
+        Debug.Log($"[PlayerController] CharacterController: {characterController}");
+        Debug.Log($"[PlayerController] CameraHolder: {cameraHolder}");
+
         if (HasInputAuthority)
-        {
             Cursor.lockState = CursorLockMode.Locked;
-        }
     }
 
     private void Update()
@@ -49,33 +45,27 @@ public class PlayerController : NetworkBehaviour
         if (!HasInputAuthority || !IsAlive)
             return;
 
-        isGrounded = characterController.isGrounded;
-
-        moveInput.x = Input.GetAxisRaw("Horizontal");
-        moveInput.y = Input.GetAxisRaw("Vertical");
-        moveInput = Vector2.ClampMagnitude(moveInput, 1f);
-    
         HandleCamera();
-
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            // Recarga: por ejemplo, no hace nada por ahora
-        }
     }
 
     public override void FixedUpdateNetwork()
     {
-        if (!HasInputAuthority || !IsAlive)
-            return;
+        if (!IsAlive) return;
 
-        HandleMovement();
+        if (GetInput(out NetworkInputData input))
+        {
+            Debug.Log($"[PlayerController] Input recibido: {input.MoveInput}");
+            HandleMovement(input);
+        }
+        else
+        {
+            Debug.LogWarning($"[PlayerController] GetInput falló. HasInputAuthority: {HasInputAuthority}");
+        }
     }
-
 
     private void HandleCamera()
     {
-        if (cameraHolder == null)
-            return;
+        if (cameraHolder == null) return;
 
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
@@ -84,40 +74,39 @@ public class PlayerController : NetworkBehaviour
 
         verticalLookRotation -= mouseY;
         verticalLookRotation = Mathf.Clamp(verticalLookRotation, -maxLookAngle, maxLookAngle);
-
         cameraHolder.localRotation = Quaternion.Euler(verticalLookRotation, 0f, 0f);
     }
 
-    private void HandleMovement()
+    private void HandleMovement(NetworkInputData input)
     {
         if (characterController == null)
+        {
+            Debug.LogWarning("[PlayerController] CharacterController es null.");
             return;
+        }
 
-        float currentSpeed = Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : moveSpeed;
-        Vector3 moveDirection = (transform.forward * moveInput.y + transform.right * moveInput.x).normalized;
-
+        float currentSpeed = input.Sprint ? sprintSpeed : moveSpeed;
+        Vector2 move = Vector2.ClampMagnitude(input.MoveInput, 1f);
+        Vector3 moveDirection = (transform.forward * move.y + transform.right * move.x).normalized;
         Vector3 horizontalVelocity = moveDirection * currentSpeed;
 
-        if (characterController.isGrounded && currentVelocity.y < 0)
+        if (characterController.isGrounded && currentVelocity.y < 0f)
             currentVelocity.y = -2f;
 
-        currentVelocity.y += gravity * Time.deltaTime;
+        currentVelocity.y += gravity * Runner.DeltaTime;
 
-        if (Input.GetKeyDown(KeyCode.Space) && characterController.isGrounded)
+        if (input.Jump && characterController.isGrounded)
             currentVelocity.y = jumpForce;
 
         Vector3 finalVelocity = new Vector3(horizontalVelocity.x, currentVelocity.y, horizontalVelocity.z);
-
-        characterController.Move(finalVelocity * Time.deltaTime);
+        characterController.Move(finalVelocity * Runner.DeltaTime);
     }
 
     public void TakeDamage(float damage)
     {
-        if (!IsAlive)
-            return;
+        if (!HasStateAuthority || !IsAlive) return;
 
         CurrentHealth -= damage;
-
         if (CurrentHealth <= 0f)
         {
             CurrentHealth = 0f;
@@ -134,8 +123,6 @@ public class PlayerController : NetworkBehaviour
         if (gameState != null)
             gameState.RecordKill(Runner.LocalPlayer, Runner.LocalPlayer, "Suicide");
 
-        Debug.Log($"[PlayerController] {gameObject.name} ha muerto");
-
         if (HasInputAuthority)
             Cursor.lockState = CursorLockMode.None;
     }
@@ -144,6 +131,7 @@ public class PlayerController : NetworkBehaviour
     {
         CurrentHealth = 100f;
         IsAlive = true;
+
         if (characterController != null)
             characterController.enabled = true;
 
@@ -155,4 +143,4 @@ public class PlayerController : NetworkBehaviour
         if (HasInputAuthority)
             Cursor.lockState = CursorLockMode.Locked;
     }
-}
+}   
