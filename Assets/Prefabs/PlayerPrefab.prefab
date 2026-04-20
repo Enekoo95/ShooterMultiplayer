@@ -35,8 +35,9 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2571867683857047165}
-  - {fileID: 4464484814079176911}
   - {fileID: 7596668441219541419}
+  - {fileID: 4923008798026470637}
+  - {fileID: 6161161155561842366}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5887366002981447551
@@ -74,12 +75,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   SortKey: 3427237696
   ObjectInterest: 1
-  Flags: 786433
+  Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 5887366002981447551}
   - {fileID: 8202655873894363412}
-  - {fileID: 9087284470077406280}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &8202655873894363412
 MonoBehaviour:
@@ -93,11 +93,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3cb1bcc4ab6ee214e8039e64409caf79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  shootOrigin: {fileID: 0}
+  shootOrigin: {fileID: 6161161155561842366}
+  weaponHolder: {fileID: 4923008798026470637}
+  weaponPrefab: {fileID: 3134033229893152293, guid: d6b497a833bad7e46a69f09ac778e8c0, type: 3}
+  weaponMuzzlePoint: {fileID: 0}
   shootRange: 100
   shootLayer:
     serializedVersion: 2
     m_Bits: 0
+  shotSound: {fileID: 0}
+  recoilAmount: 0.05
+  recoilDuration: 0.1
+  enableMuzzleFlash: 1
+  enableShotSound: 1
+  enableCameraRecoil: 1
   baseWeapon:
     weaponName: Pistola de Pintura
     damage: 10
@@ -469,7 +478,7 @@ Transform:
   - {fileID: 6946994393108786206}
   m_Father: {fileID: 2467569959849839962}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &5840865891727344643
+--- !u!1 &7505956362969149013
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -477,73 +486,57 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 4464484814079176911}
-  - component: {fileID: 9087284470077406280}
+  - component: {fileID: 6161161155561842366}
   m_Layer: 0
-  m_Name: WeaponSystem
+  m_Name: ShootOrigin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &4464484814079176911
+--- !u!4 &6161161155561842366
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5840865891727344643}
+  m_GameObject: {fileID: 7505956362969149013}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 1.11}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2467569959849839962}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &9087284470077406280
-MonoBehaviour:
+--- !u!1 &8598245409195435440
+GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5840865891727344643}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3cb1bcc4ab6ee214e8039e64409caf79, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  shootOrigin: {fileID: 2571867683857047165}
-  shootRange: 100
-  shootLayer:
-    serializedVersion: 2
-    m_Bits: 64
-  baseWeapon:
-    weaponName: Pistola de Pintura
-    damage: 10
-    fireRate: 0.1
-    ammo: 100
-    maxAmmo: 100
-    rarity: 0
-  specialWeapons:
-  - weaponName: 
-    damage: 0
-    fireRate: 0
-    ammo: 0
-    maxAmmo: 0
-    rarity: 0
-  - weaponName: 
-    damage: 0
-    fireRate: 0
-    ammo: 0
-    maxAmmo: 0
-    rarity: 0
-  - weaponName: 
-    damage: 0
-    fireRate: 0
-    ammo: 0
-    maxAmmo: 0
-    rarity: 0
-  _CurrentWeaponIndex: 0
-  _CurrentAmmo: 0
-  _LastShotTime: 0
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4923008798026470637}
+  m_Layer: 0
+  m_Name: WeaponHolder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4923008798026470637
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8598245409195435440}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.65}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2467569959849839962}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

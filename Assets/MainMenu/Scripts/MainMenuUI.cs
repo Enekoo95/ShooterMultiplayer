@@ -28,7 +28,7 @@ public class MainMenuUI : MonoBehaviour
         if (!Validate()) return;
         SavePrefs();
         SetUI(false, "Creando sala...");
-
+        // Conecta con el nuevo método del NetworkManager
         await NetworkManager.Instance.StartHost(roomNameInput.text.Trim());
     }
 
@@ -37,24 +37,15 @@ public class MainMenuUI : MonoBehaviour
         if (!Validate()) return;
         SavePrefs();
         SetUI(false, "Uniéndose a sala...");
-
+        // Conecta con el nuevo método del NetworkManager
         await NetworkManager.Instance.JoinGame(roomNameInput.text.Trim());
     }
 
     private bool Validate()
     {
         if (isConnecting) return false;
-
-        if (string.IsNullOrWhiteSpace(playerNameInput.text))
-        {
-            SetStatus("Introduce un nombre de jugador.");
-            return false;
-        }
-        if (string.IsNullOrWhiteSpace(roomNameInput.text))
-        {
-            SetStatus("Introduce un nombre de sala.");
-            return false;
-        }
+        if (string.IsNullOrWhiteSpace(playerNameInput.text)) { SetStatus("Introduce un nombre."); return false; }
+        if (string.IsNullOrWhiteSpace(roomNameInput.text)) { SetStatus("Introduce nombre de sala."); return false; }
         return true;
     }
 

@@ -26,18 +26,21 @@ public class PlayerController : NetworkBehaviour
         CurrentHealth = 100f;
         IsAlive = true;
 
-        // Busca explícitamente en hijos
+        // Asignación de componentes
         characterController = GetComponentInChildren<CharacterController>();
         cameraHolder = GetComponentInChildren<Camera>()?.transform.parent;
-
         gameState = GameState.Instance;
 
-        Debug.Log($"[PlayerController] Spawned - HasInputAuthority: {HasInputAuthority}");
-        Debug.Log($"[PlayerController] CharacterController: {characterController}");
-        Debug.Log($"[PlayerController] CameraHolder: {cameraHolder}");
-
-        if (HasInputAuthority)
+        if (!HasInputAuthority)
+        {
+            if (characterController != null)
+                characterController.enabled = false;
+        }
+        else
+        {
+            // Solo bloqueamos el cursor si somos el jugador local
             Cursor.lockState = CursorLockMode.Locked;
+        }
     }
 
     private void Update()
