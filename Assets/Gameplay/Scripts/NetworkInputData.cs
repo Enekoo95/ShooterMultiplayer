@@ -8,4 +8,7 @@ public struct NetworkInputData : INetworkInput
     public float MouseY;
     public NetworkBool Jump;
     public NetworkBool Sprint;
+    public NetworkBool Shoot;
+    public NetworkBool Reload;
+    public NetworkBool CycleWeapon;
 }

@@ -66,8 +66,8 @@ public class WeaponSystem : NetworkBehaviour
 
     private void Start()
     {
-        playerController = GetComponent<PlayerController>();
-        mainCamera = GetComponentInChildren<Camera>();
+        playerController = GetComponentInParent<PlayerController>();
+        mainCamera = transform.root.GetComponentInChildren<Camera>();
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
         {
@@ -157,23 +157,17 @@ public class WeaponSystem : NetworkBehaviour
         if (!HasInputAuthority || !playerController.IsAlive)
             return;
 
-        // Cambio de armas
-        if (Input.GetKeyDown(KeyCode.E))
-        {
+        if (!GetInput(out NetworkInputData input))
+            return;
+
+        if (input.CycleWeapon)
             CycleWeapon();
-        }
 
-        // Disparar
-        if (Input.GetMouseButton(0) && CanShoot())
-        {
+        if (input.Shoot && CanShoot())
             Shoot();
-        }
 
-        // Recargar
-        if (Input.GetKeyDown(KeyCode.R))
-        {
+        if (input.Reload)
             Reload();
-        }
     }
 
     /// <summary>

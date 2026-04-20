@@ -30,6 +30,9 @@ public class InputProvider : MonoBehaviour, INetworkRunnerCallbacks
         data.MouseY = Input.GetAxis("Mouse Y");
         data.Jump = Input.GetKey(KeyCode.Space);
         data.Sprint = Input.GetKey(KeyCode.LeftShift);
+        data.Shoot = Input.GetMouseButton(0);
+        data.Reload = Input.GetKey(KeyCode.R);
+        data.CycleWeapon = Input.GetKey(KeyCode.E);
         input.Set(data);
     }
 
