@@ -46,17 +46,21 @@ public class PlayerController : NetworkBehaviour
         if (cam != null) cam.gameObject.SetActive(HasInputAuthority);
 
         if (HasInputAuthority) Cursor.lockState = CursorLockMode.Locked;
+
+
     }
 
     // --- 1. LECTURA DEL RATÓN (Fluidez de FPS) ---
     private void Update()
     {
-        if ((HasStateAuthority || HasInputAuthority) && IsAlive)
+        if (HasInputAuthority && IsAlive)
         {
             _yaw += Input.GetAxis("Mouse X") * mouseSensitivity;
             _pitch -= Input.GetAxis("Mouse Y") * mouseSensitivity;
             _pitch = Mathf.Clamp(_pitch, -maxLookAngle, maxLookAngle);
         }
+
+
     }
 
     // --- 2. SIMULACIÓN DE RED (Sincronización a Ticks) ---
@@ -64,17 +68,22 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsAlive || characterController == null || !characterController.enabled) return;
 
-        // APLICAMOS LA ROTACIÓN A LA RED (Evita que el NetworkTransform te bloquee)
-        if (HasStateAuthority || HasInputAuthority)
+        // SOLO el que tiene el mando aplica la rotación al transform
+        if (HasInputAuthority)
         {
             transform.rotation = Quaternion.Euler(0, _yaw, 0);
         }
 
-        // LECTURA DEL TECLADO PARA MOVERSE
         if (GetInput(out NetworkInputData input))
         {
             HandleMovement(input);
         }
+
+        // Get the mouse delta. This is not in the range -1...1
+        float h = 2 * Input.GetAxis("Mouse X");
+        float v = 2 * Input.GetAxis("Mouse Y");
+
+        transform.Rotate(v, h, 0);
     }
 
     private void HandleMovement(NetworkInputData input)
@@ -98,14 +107,7 @@ public class PlayerController : NetworkBehaviour
         characterController.Move(finalVelocity * Runner.DeltaTime);
     }
 
-    // --- 3. VISUALES DE LA CÁMARA ---
-    public override void Render()
-    {
-        if ((HasStateAuthority || HasInputAuthority) && IsAlive && cameraHolder != null)
-        {
-            cameraHolder.localRotation = Quaternion.Euler(_pitch, 0, 0);
-        }
-    }
+
 
     // --- SISTEMA DE DAÑO Y MUERTE ---
     public void TakeDamage(float damage)
@@ -133,7 +135,14 @@ public class PlayerController : NetworkBehaviour
 
         if (HasInputAuthority) Cursor.lockState = CursorLockMode.None;
     }
-
+public override void Render()
+{
+    // Solo actualizamos la cámara local del dueño
+    if (HasInputAuthority && IsAlive && cameraHolder != null)
+    {
+        cameraHolder.localRotation = Quaternion.Euler(_pitch, 0, 0);
+    }
+}
     public void Respawn(Vector3 spawnPosition)
     {
         if (!HasStateAuthority) return;

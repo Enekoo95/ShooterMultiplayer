@@ -55,14 +55,11 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
 
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
-        if (runner.IsServer)
-        {
             int index = Math.Abs(player.PlayerId) % (spawnPoints?.Length ?? 1);
-            Vector3 pos = (spawnPoints != null) ? spawnPoints[index].position + Vector3.up * 1.5f : Vector3.up * 1.5f;
+            Vector3 pos = Vector3.zero;
 
             NetworkObject playerObj = runner.Spawn(playerPrefab, pos, Quaternion.identity, player);
             _spawnedPlayers.Add(player, playerObj);
-        }
     }
 
     public void RespawnPlayer(PlayerRef player, Vector3 position)
