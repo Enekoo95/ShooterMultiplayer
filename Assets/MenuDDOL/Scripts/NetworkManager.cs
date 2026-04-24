@@ -13,6 +13,8 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
     [SerializeField] private NetworkObject playerPrefab;
     private Transform[] spawnPoints;
 
+    private Dictionary<PlayerRef, NetworkObject> spawnedPlayers = new Dictionary<PlayerRef, NetworkObject>();
+
     private void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -21,8 +23,8 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
         DontDestroyOnLoad(gameObject);
     }
 
-    public async Task StartHost(string roomName) => await StartGame(GameMode.Shared, roomName);
-    public async Task JoinGame(string roomName) => await StartGame(GameMode.Shared, roomName);
+    public async Task StartHost(string roomName) => await StartGame(GameMode.Host, roomName);
+    public async Task JoinGame(string roomName) => await StartGame(GameMode.Client, roomName);
 
     private async Task StartGame(GameMode mode, string roomName)
     {
@@ -39,14 +41,13 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
         {
             GameMode = mode,
             SessionName = roomName,
-            Scene = SceneRef.FromIndex(2), // Tu escena de juego
+            Scene = SceneRef.FromIndex(2),
             SceneManager = runner.GetComponent<NetworkSceneManagerDefault>()
         });
     }
 
     public void OnSceneLoadDone(NetworkRunner runner)
     {
-        // Buscar y ordenar puntos de spawn por nombre
         GameObject[] points = GameObject.FindGameObjectsWithTag("Respawn");
         if (points.Length > 0)
         {
@@ -54,23 +55,51 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
             spawnPoints = new Transform[points.Length];
             for (int i = 0; i < points.Length; i++) spawnPoints[i] = points[i].transform;
         }
-
-        if (runner.LocalPlayer != PlayerRef.None) SpawnLocalPlayer(runner);
     }
 
-    private void SpawnLocalPlayer(NetworkRunner runner)
+    public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
-        int index = Math.Abs(runner.LocalPlayer.PlayerId) % (spawnPoints?.Length ?? 1);
-        Vector3 pos = (spawnPoints != null) ? spawnPoints[index].position + Vector3.up * 0.2f : Vector3.up;
+        if (runner.IsServer)
+        {
+            SpawnPlayer(runner, player);
+        }
+    }
+
+    private void SpawnPlayer(NetworkRunner runner, PlayerRef player)
+    {
+        int index = Math.Abs(player.PlayerId) % (spawnPoints?.Length ?? 1);
+
+        // Aumentado ligeramente el offset a 2.0f para asegurar que nace por encima del suelo y cae suavemente.
+        Vector3 pos = (spawnPoints != null) ? spawnPoints[index].position + Vector3.up * 2.0f : Vector3.up * 2.0f;
         Quaternion rot = (spawnPoints != null) ? spawnPoints[index].rotation : Quaternion.identity;
 
-        runner.Spawn(playerPrefab, pos, rot, runner.LocalPlayer);
+        NetworkObject playerObj = runner.Spawn(playerPrefab, pos, rot, player);
+        spawnedPlayers[player] = playerObj;
     }
 
-    // Callbacks obligatorios vacíos
-    public void OnPlayerJoined(NetworkRunner runner, PlayerRef player) { }
+    public void RespawnPlayer(PlayerRef player, Vector3 position)
+    {
+        if (!runner.IsServer) return;
+
+        if (spawnedPlayers.TryGetValue(player, out NetworkObject obj))
+        {
+            var controller = obj.GetComponent<PlayerController>();
+            if (controller != null)
+                controller.Respawn(position);
+        }
+    }
+
+    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
+    {
+        if (runner.IsServer && spawnedPlayers.TryGetValue(player, out NetworkObject obj))
+        {
+            runner.Despawn(obj); // Ciclo de vida correcto
+            spawnedPlayers.Remove(player);
+        }
+    }
+
+    // Callbacks obligatorios vacíos...
     public void OnInput(NetworkRunner runner, NetworkInput input) { }
-    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
     public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { }
     public void OnConnectedToServer(NetworkRunner runner) { }
     public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }

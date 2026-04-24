@@ -19,26 +19,41 @@ public class PlayerController : NetworkBehaviour
     [Networked] public float CurrentHealth { get; set; }
     [Networked] public bool IsAlive { get; set; }
 
-    private GameState gameState;
+    // Necesario para teleportar limpiamente en red
+    private NetworkTransform networkTransform;
 
+    // Sustituto de Start() - Inicializamos basados en contexto de red
     public override void Spawned()
     {
         CurrentHealth = 100f;
         IsAlive = true;
 
-        // Asignación de componentes
-        characterController = GetComponentInChildren<CharacterController>();
-        cameraHolder = GetComponentInChildren<Camera>()?.transform.parent;
-        gameState = GameState.Instance;
+        characterController = GetComponent<CharacterController>();
+        if (characterController == null) characterController = GetComponentInChildren<CharacterController>();
 
-        if (!HasInputAuthority)
+        networkTransform = GetComponent<NetworkTransform>();
+        cameraHolder = GetComponentInChildren<Camera>()?.transform.parent;
+
+        // LÓGICA DE AUTORIDAD VITAL:
+        // isProxy = true significa que no somos ni el Host (StateAuthority) ni el dueño del jugador (InputAuthority).
+        // Solo apagamos el CharacterController en los Proxies para que NetworkTransform asuma el control visual
+        // y no haya choques de físicas fantasma. El Host SÍ necesita el CC encendido para calcular colisiones.
+        bool isProxy = !HasStateAuthority && !HasInputAuthority;
+
+        if (characterController != null)
         {
-            if (characterController != null)
-                characterController.enabled = false;
+            characterController.enabled = !isProxy;
         }
-        else
+
+        Camera cam = GetComponentInChildren<Camera>();
+        if (cam != null)
         {
-            // Solo bloqueamos el cursor si somos el jugador local
+            // La cámara SOLO se activa para el jugador que controla este avatar
+            cam.gameObject.SetActive(HasInputAuthority);
+        }
+
+        if (HasInputAuthority)
+        {
             Cursor.lockState = CursorLockMode.Locked;
         }
     }
@@ -51,18 +66,15 @@ public class PlayerController : NetworkBehaviour
         HandleCamera();
     }
 
+    // Sustituto de FixedUpdate() - Toda la simulación ocurre aquí
     public override void FixedUpdateNetwork()
     {
         if (!IsAlive) return;
 
+        // GetInput devuelve true tanto para el Cliente local como para el Host
         if (GetInput(out NetworkInputData input))
         {
-            Debug.Log($"[PlayerController] Input recibido: {input.MoveInput}");
             HandleMovement(input);
-        }
-        else
-        {
-            Debug.LogWarning($"[PlayerController] GetInput falló. HasInputAuthority: {HasInputAuthority}");
         }
     }
 
@@ -82,11 +94,8 @@ public class PlayerController : NetworkBehaviour
 
     private void HandleMovement(NetworkInputData input)
     {
-        if (characterController == null)
-        {
-            Debug.LogWarning("[PlayerController] CharacterController es null.");
+        if (characterController == null || !characterController.enabled)
             return;
-        }
 
         float currentSpeed = input.Sprint ? sprintSpeed : moveSpeed;
         Vector2 move = Vector2.ClampMagnitude(input.MoveInput, 1f);
@@ -94,7 +103,7 @@ public class PlayerController : NetworkBehaviour
         Vector3 horizontalVelocity = moveDirection * currentSpeed;
 
         if (characterController.isGrounded && currentVelocity.y < 0f)
-            currentVelocity.y = -2f;
+            currentVelocity.y = -2f; // Mantenerse bien pegado al suelo
 
         currentVelocity.y += gravity * Runner.DeltaTime;
 
@@ -102,6 +111,8 @@ public class PlayerController : NetworkBehaviour
             currentVelocity.y = jumpForce;
 
         Vector3 finalVelocity = new Vector3(horizontalVelocity.x, currentVelocity.y, horizontalVelocity.z);
+
+        // Esta línea ahora sí funciona en el Host gracias a la corrección en Spawned()
         characterController.Move(finalVelocity * Runner.DeltaTime);
     }
 
@@ -117,14 +128,18 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    public void RPC_TakeDamage(float damage)
+    {
+        TakeDamage(damage);
+    }
+
     private void Die()
     {
         IsAlive = false;
+
         if (characterController != null)
             characterController.enabled = false;
-
-        if (gameState != null)
-            gameState.RecordKill(Runner.LocalPlayer, Runner.LocalPlayer, "Suicide");
 
         if (HasInputAuthority)
             Cursor.lockState = CursorLockMode.None;
@@ -132,18 +147,43 @@ public class PlayerController : NetworkBehaviour
 
     public void Respawn(Vector3 spawnPosition)
     {
+        if (!HasStateAuthority) return;
+
         CurrentHealth = 100f;
         IsAlive = true;
 
-        if (characterController != null)
-            characterController.enabled = true;
+        // REGLA DE UNITY + FUSION: Para teletransportar un CC, hay que usar NetworkTransform o apagar/encender el CC.
+        if (characterController != null) characterController.enabled = false;
 
-        transform.position = spawnPosition;
+        if (networkTransform != null)
+        {
+            networkTransform.Teleport(spawnPosition); // Teletransporte seguro de red
+        }
+        else
+        {
+            transform.position = spawnPosition;
+        }
 
-        if (gameState != null)
-            gameState.RespawnPlayer(Runner.LocalPlayer);
+        if (characterController != null) characterController.enabled = true;
 
         if (HasInputAuthority)
             Cursor.lockState = CursorLockMode.Locked;
+        else
+            RPC_OnRespawn();
     }
-}   
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
+    private void RPC_OnRespawn()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+    }
+
+    // Sustituto de OnDestroy() - Limpieza segura al despawnear
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        if (HasInputAuthority)
+        {
+            Cursor.lockState = CursorLockMode.None;
+        }
+    }
+}
