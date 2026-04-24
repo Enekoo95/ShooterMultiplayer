@@ -1,9 +1,9 @@
 using Fusion;
 using Fusion.Sockets;
 using UnityEngine;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
-using System.Collections.Generic;
 
 public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
 {
@@ -12,14 +12,12 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
 
     [SerializeField] private NetworkObject playerPrefab;
     private Transform[] spawnPoints;
-
-    private Dictionary<PlayerRef, NetworkObject> spawnedPlayers = new Dictionary<PlayerRef, NetworkObject>();
+    private Dictionary<PlayerRef, NetworkObject> _spawnedPlayers = new Dictionary<PlayerRef, NetworkObject>();
 
     private void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-        transform.SetParent(null);
         DontDestroyOnLoad(gameObject);
     }
 
@@ -34,7 +32,6 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
             runner = obj.AddComponent<NetworkRunner>();
             obj.AddComponent<NetworkSceneManagerDefault>();
             runner.AddCallbacks(this);
-            DontDestroyOnLoad(obj);
         }
 
         await runner.StartGame(new StartGameArgs()
@@ -44,6 +41,45 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
             Scene = SceneRef.FromIndex(2),
             SceneManager = runner.GetComponent<NetworkSceneManagerDefault>()
         });
+    }
+
+    // ESTO ES LO QUE HACE QUE EL MOVIMIENTO SE SINCRONICE
+    public void OnInput(NetworkRunner runner, NetworkInput input)
+    {
+        var data = new NetworkInputData();
+        data.MoveInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        data.Jump = Input.GetKey(KeyCode.Space);
+        data.Sprint = Input.GetKey(KeyCode.LeftShift);
+        input.Set(data);
+    }
+
+    public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
+    {
+        if (runner.IsServer)
+        {
+            int index = Math.Abs(player.PlayerId) % (spawnPoints?.Length ?? 1);
+            Vector3 pos = (spawnPoints != null) ? spawnPoints[index].position + Vector3.up * 1.5f : Vector3.up * 1.5f;
+
+            NetworkObject playerObj = runner.Spawn(playerPrefab, pos, Quaternion.identity, player);
+            _spawnedPlayers.Add(player, playerObj);
+        }
+    }
+
+    public void RespawnPlayer(PlayerRef player, Vector3 position)
+    {
+        if (runner.IsServer && _spawnedPlayers.TryGetValue(player, out NetworkObject obj))
+        {
+            obj.GetComponent<PlayerController>().Respawn(position);
+        }
+    }
+
+    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
+    {
+        if (runner.IsServer && _spawnedPlayers.TryGetValue(player, out NetworkObject obj))
+        {
+            runner.Despawn(obj);
+            _spawnedPlayers.Remove(player);
+        }
     }
 
     public void OnSceneLoadDone(NetworkRunner runner)
@@ -57,49 +93,7 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
-    public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
-    {
-        if (runner.IsServer)
-        {
-            SpawnPlayer(runner, player);
-        }
-    }
-
-    private void SpawnPlayer(NetworkRunner runner, PlayerRef player)
-    {
-        int index = Math.Abs(player.PlayerId) % (spawnPoints?.Length ?? 1);
-
-        // Aumentado ligeramente el offset a 2.0f para asegurar que nace por encima del suelo y cae suavemente.
-        Vector3 pos = (spawnPoints != null) ? spawnPoints[index].position + Vector3.up * 2.0f : Vector3.up * 2.0f;
-        Quaternion rot = (spawnPoints != null) ? spawnPoints[index].rotation : Quaternion.identity;
-
-        NetworkObject playerObj = runner.Spawn(playerPrefab, pos, rot, player);
-        spawnedPlayers[player] = playerObj;
-    }
-
-    public void RespawnPlayer(PlayerRef player, Vector3 position)
-    {
-        if (!runner.IsServer) return;
-
-        if (spawnedPlayers.TryGetValue(player, out NetworkObject obj))
-        {
-            var controller = obj.GetComponent<PlayerController>();
-            if (controller != null)
-                controller.Respawn(position);
-        }
-    }
-
-    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
-    {
-        if (runner.IsServer && spawnedPlayers.TryGetValue(player, out NetworkObject obj))
-        {
-            runner.Despawn(obj); // Ciclo de vida correcto
-            spawnedPlayers.Remove(player);
-        }
-    }
-
-    // Callbacks obligatorios vacíos...
-    public void OnInput(NetworkRunner runner, NetworkInput input) { }
+    // Callbacks obligatorios (vacíos pero necesarios para la interfaz)
     public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { }
     public void OnConnectedToServer(NetworkRunner runner) { }
     public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }

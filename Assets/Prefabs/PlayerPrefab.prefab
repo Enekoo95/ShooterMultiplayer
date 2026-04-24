@@ -11,9 +11,10 @@ GameObject:
   - component: {fileID: 2467569959849839962}
   - component: {fileID: 5887366002981447551}
   - component: {fileID: 3498710447741226315}
-  - component: {fileID: 8202655873894363412}
   - component: {fileID: 1529099393884593717}
+  - component: {fileID: 8202655873894363412}
   - component: {fileID: 6927998597329157347}
+  - component: {fileID: 6609478612010851967}
   m_Layer: 0
   m_Name: PlayerPrefab
   m_TagString: Untagged
@@ -56,8 +57,8 @@ MonoBehaviour:
   sprintSpeed: 8
   jumpForce: 5
   mouseSensitivity: 2
-  maxLookAngle: 89
-  characterController: {fileID: 6570005917226092580}
+  maxLookAngle: 90
+  characterController: {fileID: 1529099393884593717}
   cameraHolder: {fileID: 2571867683857047165}
   _CurrentHealth: 100
   _IsAlive: 1
@@ -80,7 +81,33 @@ MonoBehaviour:
   NetworkedBehaviours:
   - {fileID: 5887366002981447551}
   - {fileID: 8202655873894363412}
+  - {fileID: 6609478612010851967}
   ForceRemoteRenderTimeframe: 0
+--- !u!143 &1529099393884593717
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2363912412589260163}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Height: 2
+  m_Radius: 0.5
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &8202655873894363412
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -136,31 +163,6 @@ MonoBehaviour:
   _CurrentWeaponIndex: 0
   _CurrentAmmo: 0
   _LastShotTime: 0
---- !u!143 &1529099393884593717
-CharacterController:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2363912412589260163}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Height: 2
-  m_Radius: 0.5
-  m_SlopeLimit: 45
-  m_StepOffset: 0.3
-  m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &6927998597329157347
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -173,6 +175,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08a2e142cec06f44683897354b3d8082, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &6609478612010851967
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2363912412589260163}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
 --- !u!1 &3371451427661727467
 GameObject:
   m_ObjectHideFlags: 0
@@ -185,7 +204,6 @@ GameObject:
   - component: {fileID: 3102827941673802630}
   - component: {fileID: 4697811584427557314}
   - component: {fileID: 2843558370118968710}
-  - component: {fileID: 6570005917226092580}
   m_Layer: 0
   m_Name: PlayerModel
   m_TagString: Untagged
@@ -283,31 +301,6 @@ CapsuleCollider:
   m_Radius: 0.5
   m_Height: 2
   m_Direction: 1
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!143 &6570005917226092580
-CharacterController:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3371451427661727467}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Height: 2
-  m_Radius: 0.5
-  m_SlopeLimit: 45
-  m_StepOffset: 0.3
-  m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &3679451325010193086
 GameObject:
