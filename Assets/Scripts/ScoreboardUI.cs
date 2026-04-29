@@ -1,11 +1,7 @@
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
+using Fusion;
 
-/// <summary>
-/// Gestiona la interfaz del scoreboard.
-/// Se muestra/oculta con la tecla TAB.
-/// </summary>
 public class ScoreboardUI : MonoBehaviour
 {
     [SerializeField] private GameObject scoreboardPanel;
@@ -18,9 +14,7 @@ public class ScoreboardUI : MonoBehaviour
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab))
-        {
             ToggleScoreboard();
-        }
     }
 
     private void ToggleScoreboard()
@@ -29,38 +23,35 @@ public class ScoreboardUI : MonoBehaviour
         scoreboardPanel.SetActive(isScoreboardVisible);
 
         if (isScoreboardVisible)
-        {
             UpdateScoreboard();
-        }
     }
 
     private void UpdateScoreboard()
     {
-        // Limpiar lista anterior
         foreach (Transform child in playerListContainer)
-        {
             Destroy(child.gameObject);
-        }
 
         if (GameState.Instance == null)
             return;
 
-        var sortedStats = GameState.Instance.GetSortedStats();
-
-        foreach (var stats in sortedStats)
+        // Iterar con PlayerRef correcto
+        foreach (var entry in GameState.Instance.PlayerStatsDictionary)
         {
-            GameObject entry = Instantiate(playerEntryPrefab, playerListContainer);
-            TextMeshProUGUI[] texts = entry.GetComponentsInChildren<TextMeshProUGUI>();
+            PlayerRef playerRef = entry.Key;
+            var stats = entry.Value;
 
-            if (texts.Length >= 3)
+            GameObject entryObj = Instantiate(playerEntryPrefab, playerListContainer);
+            TextMeshProUGUI[] texts = entryObj.GetComponentsInChildren<TextMeshProUGUI>();
+
+            if (texts.Length >= 4)
             {
-                texts[0].text = GameState.Instance.GetPlayerName(new Fusion.PlayerRef()); // TODO: Obtener PlayerRef correcto
+                texts[0].text = GameState.Instance.GetPlayerName(playerRef);
                 texts[1].text = stats.Kills.ToString();
-                texts[2].text = stats.Score.ToString();
+                texts[2].text = stats.Deaths.ToString();
+                texts[3].text = stats.Score.ToString();
             }
         }
 
-        // Actualizar título con tiempo restante
         if (titleText != null)
         {
             int timeLeft = GameState.Instance.TimeRemaining;
