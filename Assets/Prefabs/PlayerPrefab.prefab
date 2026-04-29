@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 8202655873894363412}
   - component: {fileID: 1529099393884593717}
   - component: {fileID: 6927998597329157347}
+  - component: {fileID: -485506525459612891}
   m_Layer: 0
   m_Name: PlayerPrefab
   m_TagString: Untagged
@@ -79,6 +80,7 @@ MonoBehaviour:
   NetworkedBehaviours:
   - {fileID: 5887366002981447551}
   - {fileID: 8202655873894363412}
+  - {fileID: -485506525459612891}
   - {fileID: 9087284470077406280}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &8202655873894363412
@@ -94,10 +96,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   shootOrigin: {fileID: 0}
+  weaponHolder: {fileID: 0}
+  weaponPrefab: {fileID: 0}
+  weaponMuzzlePoint: {fileID: 0}
   shootRange: 100
   shootLayer:
     serializedVersion: 2
     m_Bits: 0
+  shotSound: {fileID: 0}
+  recoilAmount: 0.05
+  recoilDuration: 0.1
+  enableMuzzleFlash: 1
+  enableShotSound: 1
+  enableCameraRecoil: 1
   baseWeapon:
     weaponName: Pistola de Pintura
     damage: 10
@@ -164,6 +175,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08a2e142cec06f44683897354b3d8082, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &-485506525459612891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2363912412589260163}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb4498653f8d4ce468de95f6845ee8a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _HasGrenade: 0
+  _HasAirStrike: 0
+  _HasTurret: 0
+  grenadePrefab: {fileID: 173771255986698382, guid: e2354b5960c2f2f47bdb2c0addda17d6, type: 3}
+  airStrikePrefab: {fileID: 4044044536491242958, guid: 80ecac6eed9c78e4ca28b587ff47e651, type: 3}
+  turretPrefab: {fileID: 5488210374508796604, guid: a1feee0dcd883c14dbc41727893fa226, type: 3}
+  airStrikeIndicatorPrefab: {fileID: 6702306499538279488, guid: a8c458cc72f40a243876b8ef18019ac9, type: 3}
 --- !u!1 &3371451427661727467
 GameObject:
   m_ObjectHideFlags: 0
@@ -514,10 +544,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   shootOrigin: {fileID: 2571867683857047165}
+  weaponHolder: {fileID: 0}
+  weaponPrefab: {fileID: 0}
+  weaponMuzzlePoint: {fileID: 0}
   shootRange: 100
   shootLayer:
     serializedVersion: 2
     m_Bits: 64
+  shotSound: {fileID: 0}
+  recoilAmount: 0.05
+  recoilDuration: 0.1
+  enableMuzzleFlash: 1
+  enableShotSound: 1
+  enableCameraRecoil: 1
   baseWeapon:
     weaponName: Pistola de Pintura
     damage: 10
