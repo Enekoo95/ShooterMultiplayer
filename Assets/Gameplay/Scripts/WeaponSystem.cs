@@ -25,23 +25,22 @@ public class WeaponSystem : NetworkBehaviour
         Epic
     }
 
-    [SerializeField] private Transform shootOrigin; // Posición de disparo (cámara o arma)
-    [SerializeField] private Transform weaponHolder; // Contenedor del modelo de arma
-    [SerializeField] private GameObject weaponPrefab; // Prefab visual del arma
-    [SerializeField] private Transform weaponMuzzlePoint; // Punto de salida del disparo en el arma
+    [SerializeField] private Transform shootOrigin;
+    [SerializeField] private Transform weaponHolder;
+    [SerializeField] private GameObject weaponPrefab;
+    [SerializeField] private Transform weaponMuzzlePoint;
     [SerializeField] private float shootRange = 100f;
     [SerializeField] private LayerMask shootLayer;
 
-    // Efectos visuales de disparo
     [SerializeField] private AudioClip shotSound;
-    [SerializeField] private float recoilAmount = 0.05f; // Magnitud del retroceso
-    [SerializeField] private float recoilDuration = 0.1f; // Duración del retroceso
+    [SerializeField] private float recoilAmount = 0.05f;
+    [SerializeField] private float recoilDuration = 0.1f;
     [SerializeField] private bool enableMuzzleFlash = true;
     [SerializeField] private bool enableShotSound = true;
     [SerializeField] private bool enableCameraRecoil = true;
 
-    // Armas disponibles
-    [SerializeField] private WeaponStats baseWeapon = new WeaponStats
+    [SerializeField]
+    private WeaponStats baseWeapon = new WeaponStats
     {
         weaponName = "Pistola de Pintura",
         damage = 10,
@@ -53,7 +52,6 @@ public class WeaponSystem : NetworkBehaviour
 
     [SerializeField] private WeaponStats[] specialWeapons = new WeaponStats[3];
 
-    // Estado actual
     [Networked] public int CurrentWeaponIndex { get; set; } = 0;
     [Networked] public int CurrentAmmo { get; set; }
     [Networked] public float LastShotTime { get; set; }
@@ -64,22 +62,28 @@ public class WeaponSystem : NetworkBehaviour
     private AudioSource audioSource;
     private Vector3 cameraOriginalPos;
 
-    private void Start()
+    // FIX: Separar la inicialización local en un método propio
+    // para poder llamarlo tanto desde Spawned() como desde Start()
+    private bool localInitialized = false;
+
+    private void InitializeLocal()
     {
+        if (localInitialized) return;
+        localInitialized = true;
+
+        // FIX: Inicializar currentWeapon ANTES de que Spawned() lo necesite
+        InitializeSpecialWeapons();
+        currentWeapon = DeepCopyWeapon(baseWeapon);
+
         playerController = GetComponentInParent<PlayerController>();
         mainCamera = transform.root.GetComponentInChildren<Camera>();
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
-        {
             audioSource = gameObject.AddComponent<AudioSource>();
-        }
 
         if (mainCamera != null)
-        {
             cameraOriginalPos = mainCamera.transform.localPosition;
-        }
 
-        // Instanciar modelo del arma si está configurado
         if (weaponPrefab != null && weaponHolder != null)
         {
             GameObject weaponInstance = Instantiate(weaponPrefab, weaponHolder);
@@ -90,33 +94,33 @@ public class WeaponSystem : NetworkBehaviour
             {
                 Transform foundMuzzle = weaponInstance.transform.Find("MuzzlePoint");
                 if (foundMuzzle != null)
-                {
                     weaponMuzzlePoint = foundMuzzle;
-                }
             }
         }
 
-        // Preferir el punto de salida del arma cuando exista
         if (weaponMuzzlePoint != null)
-        {
             shootOrigin = weaponMuzzlePoint;
-        }
         else if (shootOrigin == null)
-        {
             shootOrigin = GetComponentInChildren<Camera>()?.transform ?? transform;
-        }
+    }
 
-        // Inicializar arma base
-        currentWeapon = DeepCopyWeapon(baseWeapon);
-
-        // Inicializar armas especiales (ejemplo)
-        InitializeSpecialWeapons();
+    // FIX: Start ya no inicializa nada, solo llama a InitializeLocal por si acaso
+    private void Start()
+    {
+        InitializeLocal();
     }
 
     public override void Spawned()
     {
-        // Aquí sí se pueden acceder las propiedades networked
-        CurrentAmmo = currentWeapon.ammo;
+        // FIX: Garantizamos que currentWeapon existe ANTES de acceder a CurrentAmmo
+        InitializeLocal();
+
+        // Ahora es seguro acceder a propiedades networked
+        if (HasInputAuthority)
+        {
+            CurrentAmmo = currentWeapon.ammo;
+            Debug.Log($"[WeaponSystem] Spawned con arma: {currentWeapon.weaponName}, Munición: {CurrentAmmo}");
+        }
     }
 
     private void InitializeSpecialWeapons()
@@ -154,7 +158,8 @@ public class WeaponSystem : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
-        if (!HasInputAuthority || !playerController.IsAlive)
+        // FIX: Null check en playerController por si Spawned() llegó antes que Start()
+        if (!HasInputAuthority || playerController == null || !playerController.IsAlive)
             return;
 
         if (!GetInput(out NetworkInputData input))
@@ -170,9 +175,6 @@ public class WeaponSystem : NetworkBehaviour
             Reload();
     }
 
-    /// <summary>
-    /// Realiza un disparo.
-    /// </summary>
     private void Shoot()
     {
         if (CurrentAmmo <= 0)
@@ -181,20 +183,16 @@ public class WeaponSystem : NetworkBehaviour
             return;
         }
 
-        // Decrementar munición local
         CurrentAmmo--;
         LastShotTime = (float)Runner.SimulationTime;
 
-        // Raycast para detectar impacto
         if (Physics.Raycast(shootOrigin.position, shootOrigin.forward, out RaycastHit hit, shootRange, shootLayer))
         {
             Debug.Log($"[WeaponSystem] Impacto en {hit.collider.gameObject.name}");
 
-            // Verificar si es un jugador
             PlayerController targetPlayer = hit.collider.GetComponent<PlayerController>();
-            if (targetPlayer && targetPlayer != playerController)
+            if (targetPlayer != null && targetPlayer != playerController)
             {
-                // Aplicar daño directamente y registrar kill local para debugging; en red, el GameState debe validar
                 targetPlayer.TakeDamage(currentWeapon.damage);
                 if (GameState.Instance != null)
                 {
@@ -207,41 +205,27 @@ public class WeaponSystem : NetworkBehaviour
             Debug.Log("[WeaponSystem] Disparo fallido");
         }
 
-        // Efecto visual
         OnShot();
     }
 
-    /// <summary>
-    /// Verifica si se puede disparar.
-    /// </summary>
     private bool CanShoot()
     {
         float timeSinceLastShot = (float)Runner.SimulationTime - LastShotTime;
         return timeSinceLastShot >= currentWeapon.fireRate;
     }
 
-    /// <summary>
-    /// Cambiar arma siguiente.
-    /// </summary>
     private void CycleWeapon()
     {
-        CurrentWeaponIndex = (CurrentWeaponIndex + 1) % 4; // 0 = base, 1-3 = especiales
+        CurrentWeaponIndex = (CurrentWeaponIndex + 1) % 4;
         EquipWeapon(CurrentWeaponIndex);
     }
 
-    /// <summary>
-    /// Equipar un arma específica.
-    /// </summary>
     public void EquipWeapon(int weaponIndex)
     {
         if (weaponIndex == 0)
-        {
             currentWeapon = DeepCopyWeapon(baseWeapon);
-        }
         else if (weaponIndex > 0 && weaponIndex <= specialWeapons.Length)
-        {
             currentWeapon = DeepCopyWeapon(specialWeapons[weaponIndex - 1]);
-        }
 
         CurrentWeaponIndex = weaponIndex;
         CurrentAmmo = currentWeapon.ammo;
@@ -249,96 +233,56 @@ public class WeaponSystem : NetworkBehaviour
         Debug.Log($"[WeaponSystem] Arma equipada: {currentWeapon.weaponName} ({currentWeapon.rarity})");
     }
 
-    /// <summary>
-    /// Recargar munición.
-    /// </summary>
     private void Reload()
     {
         CurrentAmmo = currentWeapon.maxAmmo;
         Debug.Log($"[WeaponSystem] Recargando... Munición: {CurrentAmmo}");
     }
 
-    /// <summary>
-    /// Recibir un pickup de arma.
-    /// </summary>
     public void PickupWeapon(WeaponStats weapon)
     {
-        if (!HasInputAuthority)
-            return;
-
-        EquipWeapon(CurrentWeaponIndex + 1); // Simplificado: siguiente arma
+        if (!HasInputAuthority) return;
+        EquipWeapon(CurrentWeaponIndex + 1);
         Debug.Log($"[WeaponSystem] Recogido: {weapon.weaponName}");
     }
 
-    /// <summary>
-    /// Efectos visuales de disparo (sonido, muzzle flash, etc).
-    /// </summary>
     private void OnShot()
     {
         Debug.Log($"[WeaponSystem] {currentWeapon.weaponName} dispara - Munición: {CurrentAmmo}/{currentWeapon.maxAmmo}");
-        
-        // Reproducir sonido de disparo
         PlayShotSound();
-        
-        // Mostrar muzzle flash
         PlayMuzzleFlash();
-        
-        // Aplicar recoil de cámara
-        if (mainCamera != null)
-        {
+        if (mainCamera != null && enableCameraRecoil)
             ApplyCameraRecoil();
-        }
     }
 
-    /// <summary>
-    /// Reproduce el sonido de disparo.
-    /// </summary>
     private void PlayShotSound()
     {
-        if (!enableShotSound || audioSource == null || shotSound == null)
-            return;
-
+        if (!enableShotSound || audioSource == null || shotSound == null) return;
         audioSource.PlayOneShot(shotSound, 1f);
     }
 
-    /// <summary>
-    /// Muestra un efecto de muzzle flash en la posición de disparo.
-    /// </summary>
     private void PlayMuzzleFlash()
     {
-        if (!enableMuzzleFlash)
-            return;
-
-        // Crear efecto de muzzle flash dinámicamente
+        if (!enableMuzzleFlash) return;
         MuzzleFlashEffect.CreateMuzzleFlash(shootOrigin.position, shootOrigin.rotation, 0.1f);
     }
 
-    /// <summary>
-    /// Aplica un retroceso suave a la cámara.
-    /// </summary>
     private void ApplyCameraRecoil()
     {
-        // Calcular retroceso aleatorio en pequeña cantidad
         Vector3 recoilDirection = new Vector3(
             Random.Range(-recoilAmount, recoilAmount),
             Random.Range(-recoilAmount, recoilAmount),
-            -recoilAmount * 0.5f // Retroceso hacia atrás más suave
+            -recoilAmount * 0.5f
         );
-        
-        // Guardar posición original y aplicar recoil suavemente
         StartCoroutine(ApplyRecoilCoroutine(recoilDirection));
     }
 
-    /// <summary>
-    /// Corrutina para aplicar retroceso suave de cámara.
-    /// </summary>
     private System.Collections.IEnumerator ApplyRecoilCoroutine(Vector3 recoilDirection)
     {
         Vector3 originalPos = mainCamera.transform.localPosition;
         Vector3 targetPos = originalPos + recoilDirection;
         float elapsedTime = 0f;
 
-        // Fase 1: Aplicar retroceso (primera mitad del tiempo)
         while (elapsedTime < recoilDuration * 0.5f)
         {
             elapsedTime += Time.deltaTime;
@@ -347,7 +291,6 @@ public class WeaponSystem : NetworkBehaviour
             yield return null;
         }
 
-        // Fase 2: Recuperarse (segunda mitad del tiempo)
         elapsedTime = 0f;
         while (elapsedTime < recoilDuration * 0.5f)
         {
@@ -357,19 +300,11 @@ public class WeaponSystem : NetworkBehaviour
             yield return null;
         }
 
-        // Asegurar que vuelva a posición original
         mainCamera.transform.localPosition = originalPos;
     }
 
-    public WeaponStats GetCurrentWeapon()
-    {
-        return currentWeapon;
-    }
-
-    public int GetCurrentAmmo()
-    {
-        return CurrentAmmo;
-    }
+    public WeaponStats GetCurrentWeapon() => currentWeapon;
+    public int GetCurrentAmmo() => CurrentAmmo;
 
     private WeaponStats DeepCopyWeapon(WeaponStats original)
     {
@@ -384,4 +319,3 @@ public class WeaponSystem : NetworkBehaviour
         };
     }
 }
-
