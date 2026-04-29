@@ -538,6 +538,7 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+<<<<<<< HEAD
 --- !u!1 &571815944
 GameObject:
   m_ObjectHideFlags: 0
@@ -682,6 +683,8 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 597860616}
   m_CullTransparentMesh: 1
+=======
+>>>>>>> origin/Gameplay
 --- !u!1 &635703540
 GameObject:
   m_ObjectHideFlags: 0
@@ -694,7 +697,7 @@ GameObject:
   - component: {fileID: 635703542}
   m_Layer: 0
   m_Name: SpawnPoint3
-  m_TagString: Untagged
+  m_TagString: Respawn
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -708,7 +711,7 @@ Transform:
   m_GameObject: {fileID: 635703540}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 3.52}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -869,7 +872,7 @@ GameObject:
   - component: {fileID: 733849467}
   m_Layer: 0
   m_Name: SpawnPoin4
-  m_TagString: Untagged
+  m_TagString: Respawn
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -883,7 +886,7 @@ Transform:
   m_GameObject: {fileID: 733849465}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -3.79}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1244,7 +1247,7 @@ GameObject:
   - component: {fileID: 1336617026}
   m_Layer: 0
   m_Name: SpawnPoint1
-  m_TagString: Untagged
+  m_TagString: Respawn
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1442,7 +1445,7 @@ GameObject:
   - component: {fileID: 1917293698}
   m_Layer: 0
   m_Name: SpawnPoint2
-  m_TagString: Untagged
+  m_TagString: Respawn
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1456,7 +1459,7 @@ Transform:
   m_GameObject: {fileID: 1917293696}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -4.03, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1819,7 +1822,10 @@ SceneRoots:
   - {fileID: 6916876652607111618}
   - {fileID: 1712085494}
   - {fileID: 1217309692}
-  - {fileID: 571815946}
   - {fileID: 346577499}
   - {fileID: 2040321404}
+<<<<<<< HEAD
   - {fileID: 284909031}
+=======
+  - {fileID: 1328341584}
+>>>>>>> origin/Gameplay
