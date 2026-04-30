@@ -43,31 +43,56 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
         });
     }
 
-    // ESTO ES LO QUE HACE QUE EL MOVIMIENTO SE SINCRONICE
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
         var data = new PlayerInput();
         data.Move = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         data.Jump = Input.GetKey(KeyCode.Space);
         data.Sprint = Input.GetKey(KeyCode.LeftShift);
+        data.Shoot = Input.GetMouseButton(0);
+        data.Reload = Input.GetKey(KeyCode.R);
+        data.CycleWeapon = Input.GetKeyDown(KeyCode.Q);
         input.Set(data);
     }
 
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
-            int index = Math.Abs(player.PlayerId) % (spawnPoints?.Length ?? 1);
+        if (runner.IsServer)
+        {
+            // Buscar spawnpoints si aún no los tenemos
+            if (spawnPoints == null || spawnPoints.Length == 0)
+            {
+                GameObject[] points = GameObject.FindGameObjectsWithTag("Respawn");
+                if (points.Length > 0)
+                {
+                    Array.Sort(points, (a, b) => string.Compare(a.name, b.name));
+                    spawnPoints = new Transform[points.Length];
+                    for (int i = 0; i < points.Length; i++)
+                        spawnPoints[i] = points[i].transform;
+                }
+            }
+
             Vector3 pos = Vector3.zero;
+            if (spawnPoints != null && spawnPoints.Length > 0)
+            {
+                int index = Math.Abs(player.PlayerId) % spawnPoints.Length;
+                pos = spawnPoints[index].position;
+                Debug.Log($"[NetworkManager] Spawneando jugador {player.PlayerId} en {pos}");
+            }
+            else
+            {
+                Debug.LogWarning("[NetworkManager] No hay SpawnPoints con tag 'Respawn'");
+            }
 
             NetworkObject playerObj = runner.Spawn(playerPrefab, pos, Quaternion.identity, player);
-            _spawnedPlayers.Add(player, playerObj);
+            _spawnedPlayers[player] = playerObj;
+        }
     }
 
     public void RespawnPlayer(PlayerRef player, Vector3 position)
     {
         if (runner.IsServer && _spawnedPlayers.TryGetValue(player, out NetworkObject obj))
-        {
             obj.GetComponent<PlayerController>().Respawn(position);
-        }
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
@@ -86,11 +111,11 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
         {
             Array.Sort(points, (a, b) => string.Compare(a.name, b.name));
             spawnPoints = new Transform[points.Length];
-            for (int i = 0; i < points.Length; i++) spawnPoints[i] = points[i].transform;
+            for (int i = 0; i < points.Length; i++)
+                spawnPoints[i] = points[i].transform;
         }
     }
 
-    // Callbacks obligatorios (vacíos pero necesarios para la interfaz)
     public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { }
     public void OnConnectedToServer(NetworkRunner runner) { }
     public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }

@@ -16,7 +16,8 @@ GameObject:
   - component: {fileID: 6609478612010851967}
   - component: {fileID: 1244363121732411792}
   - component: {fileID: 5318452989333280649}
-  m_Layer: 0
+  - component: {fileID: 1568708672888076400}
+  m_Layer: 3
   m_Name: PlayerPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -101,14 +102,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3cb1bcc4ab6ee214e8039e64409caf79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  shootOrigin: {fileID: 6161161155561842366}
   weaponHolder: {fileID: 4923008798026470637}
   weaponPrefab: {fileID: 3134033229893152293, guid: d6b497a833bad7e46a69f09ac778e8c0, type: 3}
-  weaponMuzzlePoint: {fileID: 6161161155561842366}
   shootRange: 100
   shootLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   shotSound: {fileID: 0}
   recoilAmount: 0.05
   recoilDuration: 0.1
@@ -225,6 +224,29 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _CurrentHealth: 100
   _IsAlive: 0
+--- !u!136 &1568708672888076400
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2363912412589260163}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 1
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &3371451427661727467
 GameObject:
   m_ObjectHideFlags: 0
@@ -237,7 +259,7 @@ GameObject:
   - component: {fileID: 3102827941673802630}
   - component: {fileID: 4697811584427557314}
   - component: {fileID: 2843558370118968710}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: PlayerModel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -347,7 +369,7 @@ GameObject:
   - component: {fileID: 3641616286490821890}
   - component: {fileID: 5271861826234105473}
   - component: {fileID: 4585346273891501767}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Main Camera
   m_TagString: MainCamera
   m_Icon: {fileID: 0}
@@ -481,7 +503,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2571867683857047165}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: CameraHolder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -513,7 +535,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6161161155561842366}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: ShootOrigin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -544,7 +566,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4923008798026470637}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: WeaponHolder
   m_TagString: Untagged
   m_Icon: {fileID: 0}

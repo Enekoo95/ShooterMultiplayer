@@ -17,7 +17,6 @@ public class MainMenuUI : MonoBehaviour
     {
         playerNameInput.text = PlayerPrefs.GetString("PlayerName", "");
         roomNameInput.text = PlayerPrefs.GetString("RoomName", "sala1");
-
         createButton.onClick.AddListener(OnCreate);
         joinButton.onClick.AddListener(OnJoin);
         quitButton.onClick.AddListener(() => Application.Quit());
@@ -28,7 +27,6 @@ public class MainMenuUI : MonoBehaviour
         if (!Validate()) return;
         SavePrefs();
         SetUI(false, "Creando sala...");
-        // Conecta con el nuevo método del NetworkManager
         await NetworkManager.Instance.StartHost(roomNameInput.text.Trim());
     }
 
@@ -37,7 +35,6 @@ public class MainMenuUI : MonoBehaviour
         if (!Validate()) return;
         SavePrefs();
         SetUI(false, "Uniéndose a sala...");
-        // Conecta con el nuevo método del NetworkManager
         await NetworkManager.Instance.JoinGame(roomNameInput.text.Trim());
     }
 
