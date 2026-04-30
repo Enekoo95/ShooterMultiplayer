@@ -13,10 +13,11 @@ public class InputProvider : MonoBehaviour, INetworkRunnerCallbacks
     [SerializeField] private InputActionReference jumpAction;
     [SerializeField] private InputActionReference sprintAction;
     [SerializeField] private InputActionReference crouchAction;
+    [SerializeField] private InputActionReference shootAction;
+    [SerializeField] private InputActionReference reloadAction;
+    [SerializeField] private InputActionReference cycleWeaponAction;
 
     private NetworkRunner runner;
-
-    // Acumulamos el delta del raton entre ticks para no perder movimiento
     private Vector2 _accumulatedLook;
 
     private void Awake()
@@ -24,7 +25,6 @@ public class InputProvider : MonoBehaviour, INetworkRunnerCallbacks
         runner = GetComponent<NetworkRunner>();
         if (runner == null)
             runner = FindFirstObjectByType<NetworkRunner>();
-
         if (runner != null)
             runner.AddCallbacks(this);
     }
@@ -36,6 +36,9 @@ public class InputProvider : MonoBehaviour, INetworkRunnerCallbacks
         jumpAction?.action.Enable();
         sprintAction?.action.Enable();
         crouchAction?.action.Enable();
+        shootAction?.action.Enable();
+        reloadAction?.action.Enable();
+        cycleWeaponAction?.action.Enable();
     }
 
     private void OnDisable()
@@ -45,9 +48,11 @@ public class InputProvider : MonoBehaviour, INetworkRunnerCallbacks
         jumpAction?.action.Disable();
         sprintAction?.action.Disable();
         crouchAction?.action.Disable();
+        shootAction?.action.Disable();
+        reloadAction?.action.Disable();
+        cycleWeaponAction?.action.Disable();
     }
 
-    // Update acumula el delta del raton cada frame (mas preciso que leerlo en el tick)
     private void Update()
     {
         if (lookAction != null)
@@ -63,9 +68,12 @@ public class InputProvider : MonoBehaviour, INetworkRunnerCallbacks
             Jump = jumpAction != null && jumpAction.action.IsPressed(),
             Sprint = sprintAction != null && sprintAction.action.IsPressed(),
             Crouch = crouchAction != null && crouchAction.action.IsPressed(),
+            Shoot = shootAction != null && shootAction.action.IsPressed(),
+            Reload = reloadAction != null && reloadAction.action.WasPressedThisFrame(),
+            CycleWeapon = cycleWeaponAction != null && cycleWeaponAction.action.WasPressedThisFrame(),
         };
 
-        _accumulatedLook = Vector2.zero; // Resetea despues de enviar
+        _accumulatedLook = Vector2.zero;
         input.Set(data);
     }
 

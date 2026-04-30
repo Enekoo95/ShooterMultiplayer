@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 6927998597329157347}
   - component: {fileID: 6609478612010851967}
   - component: {fileID: 1244363121732411792}
+  - component: {fileID: 5318452989333280649}
   m_Layer: 0
   m_Name: PlayerPrefab
   m_TagString: Untagged
@@ -61,6 +62,7 @@ MonoBehaviour:
   - {fileID: 8202655873894363412}
   - {fileID: 6609478612010851967}
   - {fileID: 1244363121732411792}
+  - {fileID: 5318452989333280649}
   ForceRemoteRenderTimeframe: 0
 --- !u!143 &1529099393884593717
 CharacterController:
@@ -102,7 +104,7 @@ MonoBehaviour:
   shootOrigin: {fileID: 6161161155561842366}
   weaponHolder: {fileID: 4923008798026470637}
   weaponPrefab: {fileID: 3134033229893152293, guid: d6b497a833bad7e46a69f09ac778e8c0, type: 3}
-  weaponMuzzlePoint: {fileID: 0}
+  weaponMuzzlePoint: {fileID: 6161161155561842366}
   shootRange: 100
   shootLayer:
     serializedVersion: 2
@@ -159,6 +161,9 @@ MonoBehaviour:
   jumpAction: {fileID: -2099379676528639254, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   sprintAction: {fileID: -7471211009204490832, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   crouchAction: {fileID: 7040659881675835329, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  shootAction: {fileID: 1120369429361536294, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  reloadAction: {fileID: 1781555164194001046, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  cycleWeaponAction: {fileID: 7476244043514120974, guid: 052faaac586de48259a63d0c4782560b, type: 3}
 --- !u!114 &6609478612010851967
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -206,6 +211,20 @@ MonoBehaviour:
     m_Bits: 4294967295
   _NetworkedYaw: 0
   _NetworkedPitch: 0
+--- !u!114 &5318452989333280649
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2363912412589260163}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5950b5b4132b16488c6932f5e11d412, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _CurrentHealth: 100
+  _IsAlive: 0
 --- !u!1 &3371451427661727467
 GameObject:
   m_ObjectHideFlags: 0
