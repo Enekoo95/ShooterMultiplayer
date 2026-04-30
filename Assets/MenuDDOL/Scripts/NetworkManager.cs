@@ -46,8 +46,8 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
     // ESTO ES LO QUE HACE QUE EL MOVIMIENTO SE SINCRONICE
     public void OnInput(NetworkRunner runner, NetworkInput input)
     {
-        var data = new NetworkInputData();
-        data.MoveInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+        var data = new PlayerInput();
+        data.Move = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         data.Jump = Input.GetKey(KeyCode.Space);
         data.Sprint = Input.GetKey(KeyCode.LeftShift);
         input.Set(data);

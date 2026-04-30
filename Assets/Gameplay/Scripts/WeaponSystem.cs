@@ -162,7 +162,7 @@ public class WeaponSystem : NetworkBehaviour
         if (!HasInputAuthority || playerController == null || !playerController.IsAlive)
             return;
 
-        if (!GetInput(out NetworkInputData input))
+        if (!GetInput(out PlayerInput input))
             return;
 
         if (input.CycleWeapon)
