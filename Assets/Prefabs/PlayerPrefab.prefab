@@ -107,7 +107,7 @@ MonoBehaviour:
   shootRange: 100
   shootLayer:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 4294967295
   shotSound: {fileID: 0}
   recoilAmount: 0.05
   recoilDuration: 0.1

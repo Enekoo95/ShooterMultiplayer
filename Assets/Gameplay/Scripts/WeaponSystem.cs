@@ -148,52 +148,39 @@ public class WeaponSystem : NetworkBehaviour
 
     private void Shoot()
     {
-        if (CurrentAmmo <= 0)
-        {
-            Debug.LogWarning("[WeaponSystem] Sin munición");
-            return;
-        }
+        if (CurrentAmmo <= 0) return;
 
         CurrentAmmo--;
         LastShotTime = (float)Runner.SimulationTime;
 
-        // Buscar cámara si no la tenemos
         if (playerCamera == null)
             playerCamera = Camera.main ?? transform.root.GetComponentInChildren<Camera>();
-
-        if (playerCamera == null)
-        {
-            Debug.LogWarning("[WeaponSystem] No hay cámara disponible");
-            return;
-        }
+        if (playerCamera == null) return;
 
         Vector3 origin = playerCamera.transform.position;
         Vector3 direction = playerCamera.transform.forward;
 
-        Debug.Log($"[WeaponSystem] Disparando desde {origin} hacia {direction}");
+        RaycastHit[] hits = Physics.RaycastAll(origin, direction, shootRange);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
-        // Usar OverlapSphere como fallback si el raycast falla
-        if (Physics.Raycast(origin, direction, out RaycastHit hit, shootRange, shootLayer))
+        foreach (RaycastHit hit in hits)
         {
-            Debug.Log($"[WeaponSystem] Impacto en {hit.collider.gameObject.name}");
+            // Ignorar objetos del propio jugador
+            if (hit.collider.transform.root == transform.root) continue;
 
-            PlayerController target = hit.collider.GetComponentInParent<PlayerController>();
+            PlayerController target = hit.collider.transform.root.GetComponent<PlayerController>();
             if (target == null)
-                target = hit.collider.GetComponent<PlayerController>();
+                target = hit.collider.GetComponentInParent<PlayerController>();
 
-            if (target != null && target != playerController)
+            if (target != null)
             {
                 Debug.Log($"[WeaponSystem] Dañando a {target.name}");
                 target.RPC_TakeDamage(currentWeapon.damage);
+                break;
             }
-            else
-            {
-                Debug.LogWarning("[WeaponSystem] Impacto sin PlayerController válido");
-            }
-        }
-        else
-        {
-            Debug.LogWarning($"[WeaponSystem] Raycast no impactó nada - Layer: {shootLayer.value}");
+
+            // Si impactamos algo que no es jugador, paramos el raycast
+            break;
         }
 
         OnShot();
