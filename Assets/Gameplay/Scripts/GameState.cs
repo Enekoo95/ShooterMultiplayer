@@ -44,7 +44,7 @@ public class GameState : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
-        if (!HasInputAuthority) return;
+        if (!HasStateAuthority) return;
         if (Runner.IsShutdown || !IsGameActive) return;
 
         gameTimer += Runner.DeltaTime;
@@ -56,7 +56,11 @@ public class GameState : NetworkBehaviour
 
     public void RegisterPlayer(PlayerRef player, string playerName)
     {
-        if (!HasInputAuthority) return;
+        if (!HasStateAuthority)
+        {
+            RPC_RequestRegister(player, playerName);
+            return;
+        }
 
         var stats = new PlayerStats
         {
@@ -71,13 +75,18 @@ public class GameState : NetworkBehaviour
         PlayerStatsDictionary.Set(player, stats);
         playerStreaks[player] = 0;
         playerNames[player] = playerName;
-
         Debug.Log($"[GameState] Jugador registrado: {playerName}");
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_RequestRegister(PlayerRef player, string playerName)
+    {
+        RegisterPlayer(player, playerName);
     }
 
     public void RecordKill(PlayerRef killer, PlayerRef victim, string weaponType)
     {
-        if (!HasInputAuthority)
+        if (!HasStateAuthority)
         {
             RPC_RequestKill(killer, victim, weaponType);
             return;
@@ -105,28 +114,27 @@ public class GameState : NetworkBehaviour
             playerStreaks[victim] = 0;
         }
 
-        // Notificar KillFeed a todos los clientes
         RPC_UpdateKillFeed(GetPlayerName(killer), GetPlayerName(victim), weaponType);
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     private void RPC_UpdateKillFeed(string killerName, string victimName, string weaponType)
     {
+        Debug.Log($"[GameState] RPC_UpdateKillFeed: {killerName} eliminó a {victimName}");
         KillFeed killFeed = FindObjectOfType<KillFeed>();
         if (killFeed != null)
             killFeed.AddKill(killerName, victimName, weaponType);
     }
 
-    [Rpc]
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     private void RPC_RequestKill(PlayerRef killer, PlayerRef victim, string weaponType)
     {
-        if (HasInputAuthority)
-            _ProcessKill(killer, victim, weaponType);
+        _ProcessKill(killer, victim, weaponType);
     }
 
     public void DamagePlayer(PlayerRef player, float damage)
     {
-        if (!HasInputAuthority) return;
+        if (!HasStateAuthority) return;
 
         if (PlayerStatsDictionary.TryGet(player, out var stats))
         {
@@ -142,7 +150,7 @@ public class GameState : NetworkBehaviour
 
     public void RespawnPlayer(PlayerRef player)
     {
-        if (!HasInputAuthority) return;
+        if (!HasStateAuthority) return;
 
         if (PlayerStatsDictionary.TryGet(player, out var stats))
         {
@@ -188,7 +196,7 @@ public class GameState : NetworkBehaviour
 
     public void StartGame()
     {
-        if (!HasInputAuthority) return;
+        if (!HasStateAuthority) return;
         IsGameActive = true;
         gameTimer = 0f;
         TimeRemaining = (int)GAME_DURATION;

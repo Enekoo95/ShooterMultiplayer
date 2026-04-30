@@ -175,7 +175,7 @@ public class WeaponSystem : NetworkBehaviour
             if (target != null)
             {
                 Debug.Log($"[WeaponSystem] Dañando a {target.name}");
-                target.RPC_TakeDamage(currentWeapon.damage);
+                target.RPC_TakeDamage(currentWeapon.damage, Runner.LocalPlayer);
                 break;
             }
 

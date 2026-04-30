@@ -7,6 +7,7 @@ public class PlayerController : NetworkBehaviour
     [Networked] public bool IsAlive { get; set; }
     [Networked] private float RespawnTime { get; set; }
     [Networked] private int RespawnIndex { get; set; }
+    [Networked] private PlayerRef LastAttacker { get; set; }
 
     private GameState _gameState;
     private const float RESPAWN_DELAY = 3f;
@@ -20,10 +21,19 @@ public class PlayerController : NetworkBehaviour
             RespawnTime = -1f;
         }
         _gameState = GameState.Instance;
+
+        // Registrar jugador en GameState
+        if (_gameState != null && Object.HasStateAuthority)
+        {
+            string playerName = PlayerPrefs.GetString("PlayerName", "Jugador" + Object.InputAuthority.PlayerId);
+            _gameState.RegisterPlayer(Object.InputAuthority, playerName);
+            _gameState.StartGame();
+        }
     }
 
     public override void FixedUpdateNetwork()
     {
+        if (!HasStateAuthority) return;
         if (!IsAlive && RespawnTime > 0 && Runner.SimulationTime >= RespawnTime)
         {
             RespawnTime = -1f;
@@ -38,10 +48,12 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    public void TakeDamage(float damage)
+    public void TakeDamage(float damage, PlayerRef attacker = default)
     {
         if (!HasStateAuthority || !IsAlive) return;
         CurrentHealth -= damage;
+        if (attacker != default)
+            LastAttacker = attacker;
         Debug.Log($"[PlayerController] TakeDamage: {damage}, Vida restante: {CurrentHealth}");
         if (CurrentHealth <= 0f)
         {
@@ -51,15 +63,23 @@ public class PlayerController : NetworkBehaviour
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    public void RPC_TakeDamage(float damage) => TakeDamage(damage);
+    public void RPC_TakeDamage(float damage, PlayerRef attacker)
+    {
+        TakeDamage(damage, attacker);
+    }
 
     private void Die()
     {
         IsAlive = false;
         RespawnTime = (float)Runner.SimulationTime + RESPAWN_DELAY;
-        Debug.Log($"[PlayerController] Jugador muerto! Respawn en {RESPAWN_DELAY}s");
+        Debug.Log($"[PlayerController] Jugador muerto!");
+
         if (_gameState != null)
-            _gameState.RecordKill(Object.InputAuthority, Object.InputAuthority, "Suicide");
+        {
+            PlayerRef killer = LastAttacker != default ? LastAttacker : Object.InputAuthority;
+            _gameState.RecordKill(killer, Object.InputAuthority, "Pistola de Pintura");
+        }
+
         GetComponent<StreakSystem>()?.OnPlayerDied();
         if (HasInputAuthority) Cursor.lockState = CursorLockMode.None;
     }
@@ -69,6 +89,7 @@ public class PlayerController : NetworkBehaviour
         if (!HasStateAuthority) return;
         CurrentHealth = 100f;
         IsAlive = true;
+        LastAttacker = default;
         Debug.Log($"[PlayerController] Respawneando en {spawnPosition}");
         var nt = GetComponent<NetworkTransform>();
         if (nt != null) nt.Teleport(spawnPosition);
