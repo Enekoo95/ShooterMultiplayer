@@ -62,12 +62,12 @@ public class WeaponPickup : NetworkBehaviour
     private void RPC_PickupWeapon()
     {
         isPickedUp = true;
-        gameObject.SetActive(false);
+        RPC_HideForAll();
     }
 
-    private void OnDrawGizmosSelected()
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    private void RPC_HideForAll()
     {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, pickupRadius);
+        gameObject.SetActive(false);
     }
 }
