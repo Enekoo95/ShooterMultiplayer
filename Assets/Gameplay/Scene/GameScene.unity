@@ -434,7 +434,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   killFeedContainer: {fileID: 1550163142}
-  killEntryPrefab: {fileID: 6014028547083641822, guid: b707c97fdc5424c469175f243be511ec, type: 3}
+  killEntryPrefab: {fileID: 7117178515110670782, guid: 49a83fe06bae43a49ad6d4bac892e227, type: 3}
   maxEntries: 5
   entryLifetime: 5
 --- !u!1 &289007309
@@ -2572,6 +2572,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1550163142}
+  - component: {fileID: 1550163143}
   m_Layer: 5
   m_Name: KillFeedContainer
   m_TagString: Untagged
@@ -2598,6 +2599,32 @@ RectTransform:
   m_AnchoredPosition: {x: 10, y: 0}
   m_SizeDelta: {x: 279.65, y: 252.44}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1550163143
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1550163141}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59f8146938fff824cb5fd77236b75775, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Padding:
+    m_Left: 0
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 0
+  m_Spacing: 5
+  m_ChildForceExpandWidth: 0
+  m_ChildForceExpandHeight: 0
+  m_ChildControlWidth: 1
+  m_ChildControlHeight: 1
+  m_ChildScaleWidth: 0
+  m_ChildScaleHeight: 0
+  m_ReverseArrangement: 0
 --- !u!1 &1572114993
 GameObject:
   m_ObjectHideFlags: 0

@@ -22,32 +22,23 @@ public class KillFeed : MonoBehaviour
             return;
         }
         Instance = this;
-        Debug.Log("[KillFeed] Instance registrada correctamente.");
     }
 
     private void Start()
     {
-        // Diagnóstico: avisar si faltan referencias en el Inspector
+        // Diagnóstico inicial
         if (killEntryPrefab == null)
             Debug.LogError("[KillFeed] killEntryPrefab NO está asignado en el Inspector.");
         if (killFeedContainer == null)
             Debug.LogError("[KillFeed] killFeedContainer NO está asignado en el Inspector.");
+
     }
 
     public void AddKill(string killerName, string victimName, string weaponName)
     {
-        Debug.Log($"[KillFeed] AddKill llamado: {killerName} [{weaponName}] {victimName}");
+        if (killEntryPrefab == null || killFeedContainer == null) return;
 
-        if (killEntryPrefab == null || killFeedContainer == null)
-        {
-            Debug.LogError("[KillFeed] Faltan referencias en el Inspector.");
-            return;
-        }
-
-        // Asegurarse de que el panel está activo
-        gameObject.SetActive(true);
-
-        // Eliminar entradas viejas si se supera el máximo
+        // Eliminar entradas viejas si se supera el máximo antes de crear la nueva
         while (killEntries.Count >= maxEntries)
         {
             GameObject old = killEntries.Dequeue();
@@ -56,31 +47,43 @@ public class KillFeed : MonoBehaviour
 
         // Crear nueva entrada
         GameObject entry = Instantiate(killEntryPrefab, killFeedContainer);
+
+        entry.transform.localScale = Vector3.one;
+
         TextMeshProUGUI text = entry.GetComponentInChildren<TextMeshProUGUI>();
 
         if (text != null)
-            text.text = $"{killerName}  [{weaponName}]  {victimName}";
+        {
+            text.text = $"{killerName} elimino a {victimName} con {weaponName}  ";
+        }
         else
-            Debug.LogError("[KillFeed] El killEntryPrefab no tiene TextMeshProUGUI como hijo.");
+        {
+            Debug.LogError("[KillFeed] El prefab no tiene un componente TextMeshProUGUI.");
+        }
 
         killEntries.Enqueue(entry);
-        StartCoroutine(DestroyEntry(entry, entryLifetime));
+        StartCoroutine(DestroyEntryRoutine(entry, entryLifetime));
     }
 
-    private IEnumerator DestroyEntry(GameObject entry, float delay)
+    private IEnumerator DestroyEntryRoutine(GameObject entry, float delay)
     {
         yield return new WaitForSeconds(delay);
 
-        if (entry == null) yield break;
-
-        var newQueue = new Queue<GameObject>();
-        foreach (var e in killEntries)
+        if (entry != null)
         {
-            if (e != entry && e != null)
-                newQueue.Enqueue(e);
-        }
-        killEntries = newQueue;
+            // Remover de la cola si aún existe allí
+            if (killEntries.Contains(entry))
+            {
+                // Reconstruimos la cola sin este elemento
+                Queue<GameObject> updatedQueue = new Queue<GameObject>();
+                foreach (var item in killEntries)
+                {
+                    if (item != entry && item != null) updatedQueue.Enqueue(item);
+                }
+                killEntries = updatedQueue;
+            }
 
-        Destroy(entry);
+            Destroy(entry);
+        }
     }
 }
