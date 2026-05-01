@@ -2095,7 +2095,7 @@ GameObject:
   - component: {fileID: 1328341583}
   - component: {fileID: 1328341582}
   - component: {fileID: 1328341581}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2862,6 +2862,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _PlayerStatsDictionary:
+    _items: []
+  _PlayerNames:
     _items: []
   _TimeRemaining: 0
   _WinnerScore: 1000
