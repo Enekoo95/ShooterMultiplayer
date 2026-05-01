@@ -17,6 +17,10 @@ public class MainMenuUI : MonoBehaviour
     {
         playerNameInput.text = PlayerPrefs.GetString("PlayerName", "");
         roomNameInput.text = PlayerPrefs.GetString("RoomName", "sala1");
+
+        if (PlayerProfileManager.Instance != null && !string.IsNullOrEmpty(playerNameInput.text))
+            PlayerProfileManager.Instance.playerName = playerNameInput.text;
+
         createButton.onClick.AddListener(OnCreate);
         joinButton.onClick.AddListener(OnJoin);
         quitButton.onClick.AddListener(() => Application.Quit());
@@ -48,9 +52,13 @@ public class MainMenuUI : MonoBehaviour
 
     private void SavePrefs()
     {
-        PlayerPrefs.SetString("PlayerName", playerNameInput.text.Trim());
+        string name = playerNameInput.text.Trim();
+        PlayerPrefs.SetString("PlayerName", name);
         PlayerPrefs.SetString("RoomName", roomNameInput.text.Trim());
         PlayerPrefs.Save();
+
+        if (PlayerProfileManager.Instance != null)
+            PlayerProfileManager.Instance.playerName = name;
     }
 
     private void SetUI(bool interactable, string status = "")

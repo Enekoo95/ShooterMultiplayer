@@ -12,7 +12,7 @@ public class PlayerMovement : NetworkBehaviour
 
     [Header("Salto y Gravedad")]
     [SerializeField] private float jumpHeight = 1.2f;
-    [SerializeField] private float gravity = -20f;
+    [SerializeField] private float gravity = -20f; // Sugerido -20 para mejor sensación
 
     [Header("Camara FPS")]
     [SerializeField] private Transform cameraHolder;
@@ -26,8 +26,8 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField] private float crouchTransitionSpeed = 8f;
 
     [Header("Ground Check")]
-    [SerializeField] private float groundCheckDistance = 0.2f;
-    [SerializeField] private LayerMask groundMask = ~0;
+    [SerializeField] private float groundCheckDistance = 0.3f; // Aumentado para fiabilidad
+    [SerializeField] private LayerMask groundMask;
 
     [Networked] private NetworkBool IsGrounded { get; set; }
     [Networked] private NetworkBool IsCrouching { get; set; }
@@ -63,6 +63,7 @@ public class PlayerMovement : NetworkBehaviour
     {
         if (!GetInput(out PlayerInput input)) return;
 
+        // Reset local pos para el crouch lerp visual si es necesario
         if (cameraHolder != null)
         {
             cameraHolder.localPosition = cameraInitialLocalPos;
@@ -77,17 +78,23 @@ public class PlayerMovement : NetworkBehaviour
         MoveCharacter();
     }
 
+    private void GroundCheck()
+    {
+        // Calculamos la base del CharacterController de forma precisa
+        Vector3 spherePos = transform.position + cc.center + (Vector3.down * (cc.height / 2f));
+
+        // El radio debe ser suficiente para superar el 'Skin Width' del CC
+        IsGrounded = Physics.CheckSphere(spherePos, groundCheckDistance, groundMask, QueryTriggerInteraction.Ignore);
+    }
+
     private void HandleLook(PlayerInput input)
     {
         NetworkedYaw += input.LookDelta.x * sensX;
         NetworkedPitch -= input.LookDelta.y * sensY;
-
         NetworkedPitch = Mathf.Clamp(NetworkedPitch, -maxLookAngle, maxLookAngle);
 
-        // gira el cuerpo
         transform.rotation = Quaternion.Euler(0f, NetworkedYaw, 0f);
 
-        // gira la cámara (mirar arriba/abajo)
         if (cameraHolder != null)
             cameraHolder.localRotation = Quaternion.Euler(NetworkedPitch, 0f, 0f);
     }
@@ -98,8 +105,7 @@ public class PlayerMovement : NetworkBehaviour
                     : input.Sprint ? sprintSpeed
                     : walkSpeed;
 
-        Vector3 move = transform.right * input.Move.x
-                     + transform.forward * input.Move.y;
+        Vector3 move = transform.right * input.Move.x + transform.forward * input.Move.y;
 
         if (move.magnitude > 1f) move.Normalize();
 
@@ -108,20 +114,32 @@ public class PlayerMovement : NetworkBehaviour
 
     private void HandleJump(PlayerInput input)
     {
+        // Solo saltar si el input es verdadero Y estamos en el suelo
         if (input.Jump && IsGrounded && !IsCrouching)
+        {
             verticalVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+
+            // Forzamos el estado de suelo a falso para evitar impulsos dobles
+            IsGrounded = false;
+        }
     }
 
     private void ApplyGravity()
     {
         if (IsGrounded && verticalVelocity.y < 0f)
+        {
+            // Pequeña fuerza negativa para mantener el contacto con el suelo
             verticalVelocity.y = -2f;
+        }
         else
+        {
             verticalVelocity.y += gravity * Runner.DeltaTime;
+        }
     }
 
     private void MoveCharacter()
     {
+        // Combinamos ambas velocidades y aplicamos el movimiento
         cc.Move((horizontalVelocity + verticalVelocity) * Runner.DeltaTime);
     }
 
@@ -135,21 +153,17 @@ public class PlayerMovement : NetworkBehaviour
         float newHeight = Mathf.Lerp(previousHeight, targetHeight, crouchTransitionSpeed * Runner.DeltaTime);
         cc.height = newHeight;
 
+        // Ajustamos el centro para que el personaje no se hunda o flote al agacharse
         float heightDifference = newHeight - previousHeight;
         cc.center += new Vector3(0f, heightDifference / 2f, 0f);
     }
 
-    private void GroundCheck()
-    {
-        Vector3 spherePos = transform.position + Vector3.down * (cc.height / 2f - groundCheckDistance);
-        IsGrounded = Physics.CheckSphere(spherePos, groundCheckDistance + 0.05f, groundMask, QueryTriggerInteraction.Ignore);
-    }
-
     private void OnDrawGizmosSelected()
     {
-        if (cc == null) return;
-        Gizmos.color = Color.green;
-        Vector3 p = transform.position + Vector3.down * (cc.height / 2f - groundCheckDistance);
-        Gizmos.DrawWireSphere(p, groundCheckDistance + 0.05f);
+        if (cc == null) cc = GetComponent<CharacterController>();
+
+        Gizmos.color = IsGrounded ? Color.green : Color.red;
+        Vector3 p = transform.position + cc.center + (Vector3.down * (cc.height / 2f));
+        Gizmos.DrawWireSphere(p, groundCheckDistance);
     }
 }

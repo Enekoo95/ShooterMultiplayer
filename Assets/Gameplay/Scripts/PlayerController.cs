@@ -20,20 +20,45 @@ public class PlayerController : NetworkBehaviour
             IsAlive = true;
             RespawnTime = -1f;
         }
+
         _gameState = GameState.Instance;
 
-        // Registrar jugador en GameState
-        if (_gameState != null && Object.HasStateAuthority)
+        // FIX: solo el host inicia el juego (una sola vez, no por cada jugador)
+        if (Object.HasStateAuthority && Runner.IsServer)
         {
-            string playerName = PlayerPrefs.GetString("PlayerName", "Jugador" + Object.InputAuthority.PlayerId);
-            _gameState.RegisterPlayer(Object.InputAuthority, playerName);
-            _gameState.StartGame();
+            if (_gameState != null && !_gameState.IsGameActive)
+                _gameState.StartGame();
         }
+
+        // FIX: cada jugador envía su PROPIO nombre al host desde su propio cliente
+        // HasInputAuthority = true solo en el cliente que controla este objeto
+        if (Object.HasInputAuthority)
+        {
+            string myName = PlayerPrefs.GetString("PlayerName", "Jugador" + Object.InputAuthority.PlayerId);
+            Debug.Log($"[PlayerController] Enviando nombre al host: {myName}");
+            RPC_SendNameToHost(myName);
+        }
+    }
+
+    // RPC de cualquier cliente al host para registrar su nombre
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_SendNameToHost(string playerName)
+    {
+        if (_gameState == null) _gameState = GameState.Instance;
+        if (_gameState == null)
+        {
+            Debug.LogError("[PlayerController] GameState no encontrado al registrar nombre.");
+            return;
+        }
+
+        _gameState.RegisterPlayer(Object.InputAuthority, playerName);
+        Debug.Log($"[PlayerController] Host registró: {playerName} para {Object.InputAuthority}");
     }
 
     public override void FixedUpdateNetwork()
     {
         if (!HasStateAuthority) return;
+
         if (!IsAlive && RespawnTime > 0 && Runner.SimulationTime >= RespawnTime)
         {
             RespawnTime = -1f;
@@ -51,10 +76,13 @@ public class PlayerController : NetworkBehaviour
     public void TakeDamage(float damage, PlayerRef attacker = default)
     {
         if (!HasStateAuthority || !IsAlive) return;
+
         CurrentHealth -= damage;
         if (attacker != default)
             LastAttacker = attacker;
+
         Debug.Log($"[PlayerController] TakeDamage: {damage}, Vida restante: {CurrentHealth}");
+
         if (CurrentHealth <= 0f)
         {
             CurrentHealth = 0f;
@@ -81,22 +109,31 @@ public class PlayerController : NetworkBehaviour
         }
 
         GetComponent<StreakSystem>()?.OnPlayerDied();
-        if (HasInputAuthority) Cursor.lockState = CursorLockMode.None;
+
+        if (HasInputAuthority)
+            Cursor.lockState = CursorLockMode.None;
     }
 
     public void Respawn(Vector3 spawnPosition)
     {
         if (!HasStateAuthority) return;
+
         CurrentHealth = 100f;
         IsAlive = true;
         LastAttacker = default;
         Debug.Log($"[PlayerController] Respawneando en {spawnPosition}");
+
         var nt = GetComponent<NetworkTransform>();
         if (nt != null) nt.Teleport(spawnPosition);
         else transform.position = spawnPosition;
-        if (_gameState != null) _gameState.RespawnPlayer(Object.InputAuthority);
-        if (HasInputAuthority) Cursor.lockState = CursorLockMode.Locked;
-        else RPC_OnRespawn();
+
+        if (_gameState != null)
+            _gameState.RespawnPlayer(Object.InputAuthority);
+
+        if (HasInputAuthority)
+            Cursor.lockState = CursorLockMode.Locked;
+        else
+            RPC_OnRespawn();
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
@@ -104,6 +141,7 @@ public class PlayerController : NetworkBehaviour
 
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
-        if (HasInputAuthority) Cursor.lockState = CursorLockMode.None;
+        if (HasInputAuthority)
+            Cursor.lockState = CursorLockMode.None;
     }
 }
