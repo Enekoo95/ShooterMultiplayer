@@ -15,9 +15,13 @@ public class GameState : NetworkBehaviour
         public bool IsAlive;
     }
 
-    [Networked] public NetworkDictionary<PlayerRef, PlayerStats> PlayerStatsDictionary => default;
+    // Fusion 2: OnChangedRender se llama en todos los clientes cuando cambia la propiedad
+    [Networked, Capacity(16), OnChangedRender(nameof(OnStatsChanged))]
+    public NetworkDictionary<PlayerRef, PlayerStats> PlayerStatsDictionary => default;
 
-    private Dictionary<PlayerRef, string> playerNames = new Dictionary<PlayerRef, string>();
+    [Networked, Capacity(16), OnChangedRender(nameof(OnNamesChanged))]
+    public NetworkDictionary<PlayerRef, NetworkString<_32>> PlayerNames => default;
+
     [Networked] public int TimeRemaining { get; set; }
     [Networked] public int WinnerScore { get; set; }
     [Networked] public bool IsGameActive { get; set; }
@@ -42,6 +46,18 @@ public class GameState : NetworkBehaviour
         Instance = this;
     }
 
+    // Se llama en TODOS los clientes cuando PlayerStatsDictionary cambia
+    private void OnStatsChanged()
+    {
+        ScoreboardUI.Instance?.RefreshIfVisible();
+    }
+
+    // Se llama en TODOS los clientes cuando PlayerNames cambia
+    private void OnNamesChanged()
+    {
+        ScoreboardUI.Instance?.RefreshIfVisible();
+    }
+
     public override void FixedUpdateNetwork()
     {
         if (!HasStateAuthority) return;
@@ -62,6 +78,13 @@ public class GameState : NetworkBehaviour
             return;
         }
 
+        // Guard contra doble registro (evita duplicados en el editor)
+        if (PlayerStatsDictionary.ContainsKey(player))
+        {
+            Debug.Log($"[GameState] {playerName} ya estaba registrado, ignorando.");
+            return;
+        }
+
         var stats = new PlayerStats
         {
             Kills = 0,
@@ -74,7 +97,8 @@ public class GameState : NetworkBehaviour
 
         PlayerStatsDictionary.Set(player, stats);
         playerStreaks[player] = 0;
-        playerNames[player] = playerName;
+        PlayerNames.Set(player, playerName);
+
         Debug.Log($"[GameState] Jugador registrado: {playerName}");
     }
 
@@ -120,10 +144,8 @@ public class GameState : NetworkBehaviour
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     private void RPC_UpdateKillFeed(string killerName, string victimName, string weaponType)
     {
-        Debug.Log($"[GameState] RPC_UpdateKillFeed: {killerName} eliminó a {victimName}");
-        KillFeed killFeed = FindObjectOfType<KillFeed>();
-        if (killFeed != null)
-            killFeed.AddKill(killerName, victimName, weaponType);
+        Debug.Log($"[GameState] RPC_UpdateKillFeed recibido: {killerName} eliminó a {victimName}");
+        KillFeed.Instance?.AddKill(killerName, victimName, weaponType);
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
@@ -170,8 +192,8 @@ public class GameState : NetworkBehaviour
 
     public string GetPlayerName(PlayerRef player)
     {
-        if (playerNames.TryGetValue(player, out var name))
-            return name;
+        if (PlayerNames.TryGet(player, out var name))
+            return name.ToString();
         return "Jugador" + player.PlayerId;
     }
 
