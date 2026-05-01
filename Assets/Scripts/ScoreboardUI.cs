@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using Fusion;
+using System.Collections.Generic;
 
 public class ScoreboardUI : MonoBehaviour
 {
@@ -11,10 +12,34 @@ public class ScoreboardUI : MonoBehaviour
 
     private bool isScoreboardVisible = false;
 
+    // Singleton para que GameState pueda llamarlo directamente
+    public static ScoreboardUI Instance { get; private set; }
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
+
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Tab))
             ToggleScoreboard();
+    }
+
+    public void RefreshIfVisible()
+    {
+        if (isScoreboardVisible)
+            UpdateScoreboard();
+    }
+
+    public void ForceRefresh()
+    {
+        UpdateScoreboard();
     }
 
     private void ToggleScoreboard()
@@ -31,15 +56,15 @@ public class ScoreboardUI : MonoBehaviour
         foreach (Transform child in playerListContainer)
             Destroy(child.gameObject);
 
-        if (GameState.Instance == null)
-            return;
+        if (GameState.Instance == null) return;
 
-        // Iterar con PlayerRef correcto
+        var sorted = new List<(PlayerRef, GameState.PlayerStats)>();
         foreach (var entry in GameState.Instance.PlayerStatsDictionary)
-        {
-            PlayerRef playerRef = entry.Key;
-            var stats = entry.Value;
+            sorted.Add((entry.Key, entry.Value));
+        sorted.Sort((a, b) => b.Item2.Score.CompareTo(a.Item2.Score));
 
+        foreach (var (playerRef, stats) in sorted)
+        {
             GameObject entryObj = Instantiate(playerEntryPrefab, playerListContainer);
             TextMeshProUGUI[] texts = entryObj.GetComponentsInChildren<TextMeshProUGUI>();
 

@@ -16,7 +16,11 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
 
     private void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
@@ -87,6 +91,40 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
             NetworkObject playerObj = runner.Spawn(playerPrefab, pos, Quaternion.identity, player);
             _spawnedPlayers[player] = playerObj;
         }
+
+        // FIX: registrar el nombre del jugador local en GameState
+        // Solo el jugador local sabe su propio nombre
+        if (player == runner.LocalPlayer)
+        {
+            // Esperar un frame para que GameState esté listo
+            StartCoroutine(RegisterLocalPlayer(player));
+        }
+    }
+
+    private System.Collections.IEnumerator RegisterLocalPlayer(PlayerRef player)
+    {
+        // Esperar hasta que GameState esté disponible
+        float timeout = 5f;
+        while (GameState.Instance == null && timeout > 0f)
+        {
+            timeout -= Time.deltaTime;
+            yield return null;
+        }
+
+        if (GameState.Instance == null)
+        {
+            Debug.LogError("[NetworkManager] GameState no encontrado tras esperar.");
+            yield break;
+        }
+
+        string name = "Jugador";
+        if (PlayerProfileManager.Instance != null && !string.IsNullOrEmpty(PlayerProfileManager.Instance.playerName))
+            name = PlayerProfileManager.Instance.playerName;
+        else
+            name = "Jugador" + player.PlayerId;
+
+        GameState.Instance.RegisterPlayer(player, name);
+        Debug.Log($"[NetworkManager] Jugador local registrado como: {name}");
     }
 
     public void RespawnPlayer(PlayerRef player, Vector3 position)

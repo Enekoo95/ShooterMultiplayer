@@ -195,7 +195,7 @@ MonoBehaviour:
   walkSpeed: 5
   sprintSpeed: 10
   crouchSpeed: 2.5
-  jumpHeight: 1.2
+  jumpHeight: 2
   gravity: -9.8
   cameraHolder: {fileID: 6946994393108786206}
   sensX: 0.1
@@ -204,10 +204,10 @@ MonoBehaviour:
   normalHeight: 2
   crouchHeight: 1
   crouchTransitionSpeed: 8
-  groundCheckDistance: 0.2
+  groundCheckDistance: 0.3
   groundMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 128
   _NetworkedYaw: 0
   _NetworkedPitch: 0
 --- !u!114 &5318452989333280649
