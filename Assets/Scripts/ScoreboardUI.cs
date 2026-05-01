@@ -55,7 +55,7 @@ public class ScoreboardUI : MonoBehaviour
         if (titleText != null)
         {
             int timeLeft = GameState.Instance.TimeRemaining;
-            titleText.text = $"SCOREBOARD - {timeLeft / 60}:{(timeLeft % 60):D2}";
+            titleText.text = $"SCOREBOARD  |  {timeLeft / 60}:{(timeLeft % 60):D2}";
         }
     }
 }
