@@ -39,8 +39,6 @@ Transform:
   m_Children:
   - {fileID: 2571867683857047165}
   - {fileID: 7596668441219541419}
-  - {fileID: 4923008798026470637}
-  - {fileID: 6161161155561842366}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &3498710447741226315
@@ -114,6 +112,8 @@ MonoBehaviour:
   enableMuzzleFlash: 1
   enableShotSound: 1
   enableCameraRecoil: 1
+  enableBulletTracer: 1
+  muzzlePoint: {fileID: 6161161155561842366}
   baseWeapon:
     weaponName: Pistola de Pintura
     damage: 10
@@ -388,7 +388,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: -2.14}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 4923008798026470637}
   m_Father: {fileID: 2571867683857047165}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &3641616286490821890
@@ -551,11 +552,11 @@ Transform:
   m_GameObject: {fileID: 7505956362969149013}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 1.11}
+  m_LocalPosition: {x: 0, y: 0, z: 0.46000004}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 2467569959849839962}
+  m_Father: {fileID: 4923008798026470637}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8598245409195435440
 GameObject:
@@ -582,9 +583,10 @@ Transform:
   m_GameObject: {fileID: 8598245409195435440}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.65}
+  m_LocalPosition: {x: 0, y: -0.5, z: 0.70800006}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2467569959849839962}
+  m_Children:
+  - {fileID: 6161161155561842366}
+  m_Father: {fileID: 6946994393108786206}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

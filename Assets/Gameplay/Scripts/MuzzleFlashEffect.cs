@@ -1,128 +1,133 @@
 using UnityEngine;
 
-/// <summary>
-/// Generador de efecto de muzzle flash dinámicamente.
-/// Se instancia y se auto-destruye después de su duración.
-/// </summary>
 public class MuzzleFlashEffect : MonoBehaviour
 {
-    public ParticleSystem particles;
-    public Light flashLight;
     private float duration = 0.1f;
     private float timer = 0f;
+    private Light flashLight;
 
-    public static GameObject CreateMuzzleFlash(Vector3 position, Quaternion rotation, float duration = 0.1f)
+    // Acepta un padre opcional para que el flash siga al arma
+    public static GameObject CreateMuzzleFlash(Vector3 position, Quaternion rotation, float duration = 0.1f, Transform parent = null)
     {
-        // Crear objeto contenedor
         GameObject flashObject = new GameObject("MuzzleFlash");
         flashObject.transform.position = position;
         flashObject.transform.rotation = rotation;
 
-        // Agregar componente de efecto
+        if (parent != null)
+            flashObject.transform.SetParent(parent, worldPositionStays: true);
+
         MuzzleFlashEffect effect = flashObject.AddComponent<MuzzleFlashEffect>();
         effect.duration = duration;
 
-        // Crear sistema de partículas
+        // Partículas
         GameObject particleObj = new GameObject("Particles");
         particleObj.transform.parent = flashObject.transform;
         particleObj.transform.localPosition = Vector3.zero;
 
         ParticleSystem ps = particleObj.AddComponent<ParticleSystem>();
-        effect.particles = ps;
-
-        // Configurar sistema de partículas para efecto de flash
         ConfigureParticleSystem(ps);
+        effect.ConfigureRenderer(ps);
 
-        // Crear luz de destello
-        GameObject lightObj = new GameObject("Light");
+        // Luz de destello
+        GameObject lightObj = new GameObject("FlashLight");
         lightObj.transform.parent = flashObject.transform;
         lightObj.transform.localPosition = Vector3.zero;
-
         Light light = lightObj.AddComponent<Light>();
         light.type = LightType.Point;
-        light.intensity = 2f;
-        light.range = 10f;
-        light.color = Color.yellow;
+        light.intensity = 3f;
+        light.range = 8f;
+        light.color = new Color(1f, 0.85f, 0.4f);
         effect.flashLight = light;
 
         return flashObject;
     }
 
+    private void ConfigureRenderer(ParticleSystem ps)
+    {
+        var renderer = ps.GetComponent<ParticleSystemRenderer>();
+
+        Shader shader = Shader.Find("Particles/Standard Unlit")
+                     ?? Shader.Find("Legacy Shaders/Particles/Additive")
+                     ?? Shader.Find("Mobile/Particles/Additive")
+                     ?? Shader.Find("Unlit/Color");
+
+        if (shader != null)
+        {
+            Material mat = new Material(shader);
+            mat.color = new Color(1f, 0.8f, 0.2f, 1f);
+            renderer.material = mat;
+        }
+        else
+        {
+            Debug.LogWarning("[MuzzleFlash] No se encontró shader de partículas.");
+        }
+
+        renderer.renderMode = ParticleSystemRenderMode.Billboard;
+    }
+
     private static void ConfigureParticleSystem(ParticleSystem ps)
     {
-        // Configurar módulo de emisión
-        var emission = ps.emission;
-        emission.rateOverTime = 100f;
-        emission.burstCount = 1;
+        var main = ps.main;
+        main.duration = 0.1f;
+        main.loop = false;
+        main.startLifetime = 0.08f;
+        main.startSpeed = new ParticleSystem.MinMaxCurve(3f, 8f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.15f);
+        main.startColor = new ParticleSystem.MinMaxGradient(
+            new Color(1f, 0.9f, 0.3f),
+            new Color(1f, 0.5f, 0.1f)
+        );
 
-        // Configurar módulo de forma
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.maxParticles = 30;
+
+        var emission = ps.emission;
+        emission.rateOverTime = 0;
+        emission.SetBursts(new ParticleSystem.Burst[]
+        {
+            new ParticleSystem.Burst(0f, 15, 20)
+        });
+
         var shape = ps.shape;
         shape.shapeType = ParticleSystemShapeType.Cone;
-        shape.angle = 25f;
+        shape.angle = 20f;
+        shape.radius = 0.01f;
 
-        // Configurar módulo de velocidad inicial
-        var velocity = ps.velocityOverLifetime;
-        velocity.enabled = true;
-        velocity.x = new ParticleSystem.MinMaxCurve(-5f, 5f);
-        velocity.y = new ParticleSystem.MinMaxCurve(-5f, 5f);
-        velocity.z = new ParticleSystem.MinMaxCurve(5f, 15f);
-
-        // Configurar módulo de tamaño
-        var size = ps.sizeOverLifetime;
-        size.enabled = true;
-        size.size = new ParticleSystem.MinMaxCurve(0.5f, 2f);
-
-        // Configurar módulo de color/alpha
         var colorOverLife = ps.colorOverLifetime;
         colorOverLife.enabled = true;
-        
         Gradient gradient = new Gradient();
         gradient.SetKeys(
-            new GradientColorKey[] { 
-                new GradientColorKey(Color.yellow, 0.0f),
-                new GradientColorKey(Color.white, 0.5f),
-                new GradientColorKey(Color.red, 1.0f)
+            new GradientColorKey[]
+            {
+                new GradientColorKey(new Color(1f, 0.9f, 0.3f), 0f),
+                new GradientColorKey(new Color(1f, 0.3f, 0f), 1f)
             },
-            new GradientAlphaKey[] {
-                new GradientAlphaKey(1f, 0.0f),
-                new GradientAlphaKey(1f, 0.5f),
-                new GradientAlphaKey(0f, 1.0f)
+            new GradientAlphaKey[]
+            {
+                new GradientAlphaKey(1f, 0f),
+                new GradientAlphaKey(0f, 1f)
             }
         );
         colorOverLife.color = new ParticleSystem.MinMaxGradient(gradient);
 
-        // Configurar duración
-        var main = ps.main;
-        main.duration = 0.2f;
-        main.loop = false;
+        var sizeOverLife = ps.sizeOverLifetime;
+        sizeOverLife.enabled = true;
+        AnimationCurve sizeCurve = new AnimationCurve();
+        sizeCurve.AddKey(0f, 1f);
+        sizeCurve.AddKey(1f, 0f);
+        sizeOverLife.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
 
-        // Configurar renderer
-        var renderer = ps.GetComponent<ParticleSystemRenderer>();
-        if (renderer == null)
-        {
-            renderer = ps.gameObject.AddComponent<ParticleSystemRenderer>();
-        }
-
-        // Usar material simple para las partículas
-        Material particleMaterial = new Material(Shader.Find("Standard"));
-        particleMaterial.color = Color.yellow;
-        renderer.material = particleMaterial;
+        ps.Play();
     }
 
     private void Update()
     {
         timer += Time.deltaTime;
 
-        // Desvanecerse la luz
         if (flashLight != null)
-        {
-            flashLight.intensity = Mathf.Lerp(2f, 0f, timer / duration);
-        }
+            flashLight.intensity = Mathf.Lerp(3f, 0f, timer / duration);
 
-        // Destruir después de la duración
-        if (timer >= duration)
-        {
+        if (timer >= duration + 0.1f)
             Destroy(gameObject);
-        }
     }
 }
