@@ -26,6 +26,10 @@ public class WeaponSystem : NetworkBehaviour
     [SerializeField] private bool enableMuzzleFlash = true;
     [SerializeField] private bool enableShotSound = true;
     [SerializeField] private bool enableCameraRecoil = true;
+    [SerializeField] private bool enableBulletTracer = true;
+
+
+    [SerializeField] private Transform muzzlePoint;
 
     [SerializeField]
     private WeaponStats baseWeapon = new WeaponStats
@@ -58,12 +62,10 @@ public class WeaponSystem : NetworkBehaviour
         InitializeSpecialWeapons();
         currentWeapon = DeepCopyWeapon(baseWeapon);
 
-        // Buscar PlayerController en el padre
         playerController = GetComponentInParent<PlayerController>();
         if (playerController == null)
             playerController = transform.root.GetComponent<PlayerController>();
 
-        // Buscar cámara solo para el jugador local
         if (HasInputAuthority)
         {
             playerCamera = Camera.main;
@@ -75,7 +77,6 @@ public class WeaponSystem : NetworkBehaviour
         if (audioSource == null)
             audioSource = gameObject.AddComponent<AudioSource>();
 
-        // Instanciar modelo del arma
         if (weaponPrefab != null && weaponHolder != null && HasInputAuthority)
         {
             GameObject weaponInstance = Instantiate(weaponPrefab, weaponHolder);
@@ -95,6 +96,7 @@ public class WeaponSystem : NetworkBehaviour
             Debug.Log($"[WeaponSystem] Spawned con arma: {currentWeapon.weaponName}, Munición: {CurrentAmmo}");
         }
     }
+
     private void InitializeSpecialWeapons()
     {
         specialWeapons[0] = new WeaponStats
@@ -130,7 +132,6 @@ public class WeaponSystem : NetworkBehaviour
     {
         if (!HasInputAuthority) return;
 
-        // Reintentar encontrar playerController si es null
         if (playerController == null)
         {
             playerController = transform.root.GetComponent<PlayerController>();
@@ -138,7 +139,6 @@ public class WeaponSystem : NetworkBehaviour
         }
 
         if (!playerController.IsAlive) return;
-
         if (!GetInput(out PlayerInput input)) return;
 
         if (input.CycleWeapon) CycleWeapon();
@@ -159,13 +159,13 @@ public class WeaponSystem : NetworkBehaviour
 
         Vector3 origin = playerCamera.transform.position;
         Vector3 direction = playerCamera.transform.forward;
+        Vector3 endPoint = origin + direction * shootRange;
 
         RaycastHit[] hits = Physics.RaycastAll(origin, direction, shootRange);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
         foreach (RaycastHit hit in hits)
         {
-            // Ignorar objetos del propio jugador
             if (hit.collider.transform.root == transform.root) continue;
 
             PlayerController target = hit.collider.transform.root.GetComponent<PlayerController>();
@@ -176,14 +176,15 @@ public class WeaponSystem : NetworkBehaviour
             {
                 Debug.Log($"[WeaponSystem] Dañando a {target.name}");
                 target.RPC_TakeDamage(currentWeapon.damage, Runner.LocalPlayer);
+                endPoint = hit.point;
                 break;
             }
 
-            // Si impactamos algo que no es jugador, paramos el raycast
+            endPoint = hit.point;
             break;
         }
 
-        OnShot();
+        OnShot(origin, endPoint);
     }
 
     private bool CanShoot()
@@ -214,16 +215,62 @@ public class WeaponSystem : NetworkBehaviour
         Debug.Log($"[WeaponSystem] Recargando... Munición: {CurrentAmmo}");
     }
 
-    private void OnShot()
+    private void OnShot(Vector3 rayOrigin, Vector3 rayEnd)
     {
         if (enableShotSound && audioSource != null && shotSound != null)
             audioSource.PlayOneShot(shotSound);
 
         if (enableMuzzleFlash)
-            MuzzleFlashEffect.CreateMuzzleFlash(playerCamera.transform.position, playerCamera.transform.rotation, 0.1f);
+        {
+            Transform flashOrigin = muzzlePoint != null ? muzzlePoint
+                                  : weaponHolder != null ? weaponHolder
+                                  : transform;
+
+            Quaternion flashRotation = playerCamera != null
+                ? Quaternion.LookRotation(playerCamera.transform.forward, playerCamera.transform.up)
+                : flashOrigin.rotation;
+
+            MuzzleFlashEffect.CreateMuzzleFlash(
+                flashOrigin.position,
+                flashRotation,
+                0.1f,
+                flashOrigin
+            );
+        }
+
+        if (enableBulletTracer && HasInputAuthority)
+            ShowBulletTracer(rayOrigin, rayEnd);
 
         if (enableCameraRecoil && playerCamera != null)
             StartCoroutine(ApplyRecoilCoroutine());
+    }
+
+
+    private void ShowBulletTracer(Vector3 from, Vector3 to)
+    {
+        GameObject tracer = new GameObject("BulletTracer");
+        LineRenderer lr = tracer.AddComponent<LineRenderer>();
+
+        lr.startWidth = 0.02f;
+        lr.endWidth = 0.004f;
+        lr.positionCount = 2;
+        lr.SetPosition(0, from);
+        lr.SetPosition(1, to);
+        lr.useWorldSpace = true;
+        lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        lr.receiveShadows = false;
+
+        Shader shader = Shader.Find("Unlit/Color")
+                     ?? Shader.Find("Legacy Shaders/Particles/Additive");
+
+        if (shader != null)
+        {
+            Material mat = new Material(shader);
+            mat.color = new Color(1f, 0.95f, 0.6f, 0.8f); 
+            lr.material = mat;
+        }
+
+        Destroy(tracer, 0.04f);
     }
 
     private System.Collections.IEnumerator ApplyRecoilCoroutine()
@@ -267,6 +314,7 @@ public class WeaponSystem : NetworkBehaviour
         maxAmmo = src.maxAmmo,
         rarity = src.rarity
     };
+
     public void PickupWeapon(WeaponStats weapon)
     {
         if (!HasInputAuthority) return;
