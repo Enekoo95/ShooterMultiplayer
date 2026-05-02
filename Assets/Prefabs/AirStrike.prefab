@@ -46,8 +46,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   fallSpeed: 20
-  explosionRadius: 6
+  explosionRadius: 15
   damage: 80
+  _TargetPosition: {x: 0, y: 0, z: 0}
+  _IsMoving: 0
 --- !u!114 &5837718910681324764
 MonoBehaviour:
   m_ObjectHideFlags: 0

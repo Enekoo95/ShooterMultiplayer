@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 1244363121732411792}
   - component: {fileID: 5318452989333280649}
   - component: {fileID: 1568708672888076400}
+  - component: {fileID: -6873050585958608724}
   m_Layer: 3
   m_Name: PlayerPrefab
   m_TagString: Untagged
@@ -62,6 +63,7 @@ MonoBehaviour:
   - {fileID: 6609478612010851967}
   - {fileID: 1244363121732411792}
   - {fileID: 5318452989333280649}
+  - {fileID: -6873050585958608724}
   ForceRemoteRenderTimeframe: 0
 --- !u!143 &1529099393884593717
 CharacterController:
@@ -247,6 +249,25 @@ CapsuleCollider:
   m_Height: 1
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &-6873050585958608724
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2363912412589260163}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb4498653f8d4ce468de95f6845ee8a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _HasGrenade: 0
+  _HasAirStrike: 0
+  _HasTurret: 0
+  grenadePrefab: {fileID: 173771255986698382, guid: e2354b5960c2f2f47bdb2c0addda17d6, type: 3}
+  airStrikePrefab: {fileID: 4044044536491242958, guid: 80ecac6eed9c78e4ca28b587ff47e651, type: 3}
+  turretPrefab: {fileID: 5488210374508796604, guid: a1feee0dcd883c14dbc41727893fa226, type: 3}
+  airStrikeIndicatorPrefab: {fileID: 6702306499538279488, guid: a8c458cc72f40a243876b8ef18019ac9, type: 3}
 --- !u!1 &3371451427661727467
 GameObject:
   m_ObjectHideFlags: 0

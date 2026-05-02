@@ -3,132 +3,123 @@ using Fusion;
 
 public class StreakSystem : NetworkBehaviour
 {
-    [Networked] public bool HasGrenade { get; set; }
-    [Networked] public bool HasAirStrike { get; set; }
-    [Networked] public bool HasTurret { get; set; }
+    public bool HasGrenade { get; private set; }
+    public bool HasAirStrike { get; private set; }
+    public bool HasTurret { get; private set; }
 
     [SerializeField] private GameObject grenadePrefab;
     [SerializeField] private GameObject airStrikePrefab;
     [SerializeField] private GameObject turretPrefab;
-    [SerializeField] private GameObject airStrikeIndicatorPrefab;
 
     private int lastCheckedStreak = 0;
-    private GameObject activeIndicator = null;
-    private bool isSelectingAirStrike = false;
 
-    // Métodos públicos para el HUD
     public bool GetHasGrenade() => HasGrenade;
     public bool GetHasAirStrike() => HasAirStrike;
     public bool GetHasTurret() => HasTurret;
 
-    public override void FixedUpdateNetwork()
+    private void Update()
     {
-        if (!HasInputAuthority || GameState.Instance == null)
-            return;
+        if (!HasInputAuthority || GameState.Instance == null) return;
 
         int currentStreak = GameState.Instance.GetKillStreak(Runner.LocalPlayer);
 
-        if (currentStreak == lastCheckedStreak)
-            return;
-
-        lastCheckedStreak = currentStreak;
-
-        if (currentStreak >= 3 && !HasGrenade)
+        if (currentStreak != lastCheckedStreak)
         {
-            HasGrenade = true;
-            RPC_NotifyReward("Granada desbloqueada! Pulsa Z");
-        }
-        if (currentStreak >= 5 && !HasAirStrike)
-        {
-            HasAirStrike = true;
-            RPC_NotifyReward("Ataque Aéreo desbloqueado! Pulsa X");
-        }
-        if (currentStreak >= 10 && !HasTurret)
-        {
-            HasTurret = true;
-            RPC_NotifyReward("Torreta desbloqueada! Pulsa C");
-        }
-    }
+            lastCheckedStreak = currentStreak;
 
-    private void Update()
-    {
-        if (!HasInputAuthority) return;
+            if (currentStreak >= 3 && !HasGrenade)
+            {
+                HasGrenade = true;
+                Debug.Log("[StreakSystem] Granada desbloqueada! Pulsa Z");
+            }
+            if (currentStreak >= 5 && !HasAirStrike)
+            {
+                HasAirStrike = true;
+                Debug.Log("[StreakSystem] Ataque Aéreo desbloqueado! Pulsa X");
+            }
+            if (currentStreak >= 10 && !HasTurret)
+            {
+                HasTurret = true;
+                Debug.Log("[StreakSystem] Torreta desbloqueada! Pulsa C");
+            }
+        }
 
         if (Input.GetKeyDown(KeyCode.Z) && HasGrenade)
             UseGrenade();
 
-        if (Input.GetKeyDown(KeyCode.X) && HasAirStrike && !isSelectingAirStrike)
-            StartAirStrikeSelection();
+        if (Input.GetKeyDown(KeyCode.X) && HasAirStrike)
+        {
+            UseAirStrikeDirect();
+            HasAirStrike = false;
+        }
 
         if (Input.GetKeyDown(KeyCode.C) && HasTurret)
             UseTurret();
-
-        if (isSelectingAirStrike)
-            UpdateAirStrikeIndicator();
     }
 
     private void UseGrenade()
     {
         if (grenadePrefab == null) return;
         Vector3 spawnPos = transform.position + transform.forward * 2f + Vector3.up;
-        Runner.Spawn(grenadePrefab, spawnPos, transform.rotation, Runner.LocalPlayer);
+        RPC_SpawnGrenade(spawnPos, transform.rotation, Runner.LocalPlayer);
         HasGrenade = false;
-        lastCheckedStreak = 0;
     }
 
-    private void StartAirStrikeSelection()
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_SpawnGrenade(Vector3 pos, Quaternion rot, PlayerRef ownerRef)
     {
-        isSelectingAirStrike = true;
-        if (airStrikeIndicatorPrefab != null)
-            activeIndicator = Instantiate(airStrikeIndicatorPrefab);
+        Runner.Spawn(grenadePrefab, pos, rot, ownerRef);
     }
 
-    private void UpdateAirStrikeIndicator()
+    private void UseAirStrikeDirect()
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit, 200f))
+        PlayerController[] players = FindObjectsOfType<PlayerController>();
+        PlayerController target = null;
+        float minDist = float.MaxValue;
+
+        foreach (PlayerController p in players)
         {
-            if (activeIndicator != null)
-                activeIndicator.transform.position = hit.point + Vector3.up * 0.1f;
-
-            if (Input.GetMouseButtonDown(0))
-                ConfirmAirStrike(hit.point);
+            if (p.HasInputAuthority) continue;
+            if (!p.IsAlive) continue;
+            float dist = Vector3.Distance(transform.position, p.transform.position);
+            if (dist < minDist)
+            {
+                minDist = dist;
+                target = p;
+            }
         }
 
-        if (Input.GetMouseButtonDown(1))
-            CancelAirStrike();
+        if (target == null) return;
+        Vector3 targetPos = target.transform.position;
+        RPC_SpawnAirStrike(targetPos, Runner.LocalPlayer);
     }
 
-    private void ConfirmAirStrike(Vector3 targetPos)
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_SpawnAirStrike(Vector3 targetPos, PlayerRef ownerRef)
     {
-        if (airStrikePrefab == null) return;
-
         Vector3 spawnPos = new Vector3(targetPos.x, targetPos.y + 30f, targetPos.z);
-        var obj = Runner.Spawn(airStrikePrefab, spawnPos, Quaternion.identity, Runner.LocalPlayer);
-        obj.GetComponent<AirStrike>().Init(targetPos);
-
-        HasAirStrike = false;
-        lastCheckedStreak = 0;
-        CancelAirStrike();
-    }
-
-    private void CancelAirStrike()
-    {
-        isSelectingAirStrike = false;
-        if (activeIndicator != null)
-        {
-            Destroy(activeIndicator);
-            activeIndicator = null;
-        }
+        Runner.Spawn(airStrikePrefab, spawnPos, Quaternion.identity, ownerRef,
+            (runner, obj) =>
+            {
+                var air = obj.GetComponent<AirStrike>();
+                air.TargetPosition = targetPos;
+                air.Owner = ownerRef;
+                air.IsMoving = true;
+            });
     }
 
     private void UseTurret()
     {
         if (turretPrefab == null) return;
         Vector3 spawnPos = transform.position + transform.forward * 2f;
-        Runner.Spawn(turretPrefab, spawnPos, transform.rotation, Runner.LocalPlayer);
+        RPC_SpawnTurret(spawnPos, transform.rotation, Runner.LocalPlayer);
         HasTurret = false;
-        lastCheckedStreak = 0;
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_SpawnTurret(Vector3 pos, Quaternion rot, PlayerRef ownerRef)
+    {
+        Runner.Spawn(turretPrefab, pos, rot, ownerRef);
     }
 
     public void OnPlayerDied()
@@ -137,12 +128,5 @@ public class StreakSystem : NetworkBehaviour
         HasAirStrike = false;
         HasTurret = false;
         lastCheckedStreak = 0;
-        CancelAirStrike();
-    }
-
-    [Rpc(RpcSources.StateAuthority, RpcTargets.InputAuthority)]
-    private void RPC_NotifyReward(string message)
-    {
-        Debug.Log($"[StreakSystem] {message}");
     }
 }

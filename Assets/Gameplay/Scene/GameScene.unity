@@ -3270,7 +3270,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   grenadeIcon: {fileID: 1365925793}
-  airStrikeIcon: {fileID: 1365925793}
+  airStrikeIcon: {fileID: 1572114995}
   turretIcon: {fileID: 1877918340}
   activeColor: {r: 0.5641184, g: 0.8301887, b: 0.5521538, a: 1}
   inactiveColor: {r: 0.7735849, g: 0.7735849, b: 0.7735849, a: 0.3}

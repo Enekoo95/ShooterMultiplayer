@@ -7,7 +7,7 @@ public class WeaponPickup : NetworkBehaviour
     [SerializeField] private WeaponSystem.WeaponStats weaponStats;
     [SerializeField] private float rotationSpeed = 50f;
     [SerializeField] private float pickupRadius = 2f;
-    [SerializeField] private TextMeshPro pickupText; // NUEVO
+    [SerializeField] private TextMeshPro pickupText;
     [Networked] private bool isPickedUp { get; set; }
 
     private void Start()
@@ -18,11 +18,11 @@ public class WeaponPickup : NetworkBehaviour
 
     private void Update()
     {
+        if (!Object.IsValid) return;
         if (isPickedUp) return;
 
         transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime);
 
-        // Mostrar/ocultar texto según distancia
         PlayerController[] players = FindObjectsOfType<PlayerController>();
         bool playerNearby = false;
         foreach (PlayerController player in players)
@@ -69,5 +69,11 @@ public class WeaponPickup : NetworkBehaviour
     private void RPC_HideForAll()
     {
         gameObject.SetActive(false);
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, pickupRadius);
     }
 }
