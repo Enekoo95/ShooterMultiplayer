@@ -24,6 +24,10 @@ public class WeaponPickup : NetworkBehaviour
     private bool localPlayerInRange = false;
     private WeaponSystem localWeaponSystem;
 
+    // Cooldown para evitar recoger el arma múltiples veces seguidas
+    private float pickupCooldown = 0f;
+    private const float PICKUP_COOLDOWN_TIME = 1f;
+
     private void Awake()
     {
         HideText();
@@ -54,19 +58,60 @@ public class WeaponPickup : NetworkBehaviour
         // Rotar siempre
         transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime);
 
+        // Bajar cooldown
+        if (pickupCooldown > 0f)
+            pickupCooldown -= Time.deltaTime;
+
         if (!localPlayerInRange) return;
 
-        if (Input.GetKeyDown(KeyCode.F))
+        if (Input.GetKeyDown(KeyCode.F) && pickupCooldown <= 0f)
         {
             if (localWeaponSystem == null)
                 BuscarJugadorLocal();
 
             if (localWeaponSystem != null)
             {
+                // Ocultar texto y equipar arma
                 localPlayerInRange = false;
                 HideText();
 
+                // Cooldown para que no se recoja instantáneamente de nuevo
+                pickupCooldown = PICKUP_COOLDOWN_TIME;
+
                 localWeaponSystem.PickupWeapon(weaponIndex, weaponStats);
+
+                StartCoroutine(ReactivarTrigger());
+            }
+        }
+    }
+
+    // Después del cooldown, si el jugador sigue dentro vuelve a mostrar el texto
+    private System.Collections.IEnumerator ReactivarTrigger()
+    {
+        yield return new WaitForSeconds(PICKUP_COOLDOWN_TIME);
+
+        // Comprobar si el jugador sigue dentro del trigger
+        if (localWeaponSystem != null)
+        {
+            PlayerController player = localWeaponSystem.GetComponent<PlayerController>();
+            if (player != null)
+            {
+                Collider[] cols = GetComponents<Collider>();
+                foreach (Collider col in cols)
+                {
+                    if (!col.isTrigger) continue;
+                    // Comprobar distancia manualmente ya que no podemos re-disparar OnTriggerEnter
+                    float dist = Vector3.Distance(transform.position, player.transform.position);
+                    SphereCollider sc = col as SphereCollider;
+                    float radius = sc != null ? sc.radius : 2f;
+                    if (dist <= radius)
+                    {
+                        localPlayerInRange = true;
+                        if (pickupText != null)
+                            pickupText.gameObject.SetActive(true);
+                    }
+                    break;
+                }
             }
         }
     }
@@ -82,7 +127,6 @@ public class WeaponPickup : NetworkBehaviour
         PlayerController player = other.GetComponentInParent<PlayerController>();
         if (player == null || !player.HasInputAuthority) return;
 
-        // Asegurarse de tener referencia al entrar
         if (localWeaponSystem == null)
             BuscarJugadorLocal();
 

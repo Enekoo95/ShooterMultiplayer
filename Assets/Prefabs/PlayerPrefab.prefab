@@ -116,34 +116,15 @@ MonoBehaviour:
   enableBulletTracer: 1
   weaponPrefabs:
   - {fileID: 3775305187423326999, guid: abed1a6c2ddb8784dac7ef18b1bee714, type: 3}
-  - {fileID: 2199217828012269515, guid: 121ac0e276041484e9a0d4c36428142a, type: 3}
-  - {fileID: 9196423951404625928, guid: d47ecd3e0233b8f488a75cc64681402e, type: 3}
-  - {fileID: 6410722792995091782, guid: 9f00ea1c131937546bc57c12362d386d, type: 3}
+  - {fileID: 2199217828012269515, guid: 4181cf660de33c849920d12d17a3ff53, type: 3}
+  - {fileID: 9196423951404625928, guid: 37a8690dd3e351c49a7c92c23d12b9bd, type: 3}
+  - {fileID: 6410722792995091782, guid: f5447acb7196e3240bef34c84dc0ea29, type: 3}
   baseWeapon:
     weaponName: Pistola de Pintura
     damage: 10
     fireRate: 0.4
     ammo: 50
     maxAmmo: 100
-    rarity: 0
-  specialWeapons:
-  - weaponName: 
-    damage: 0
-    fireRate: 0
-    ammo: 0
-    maxAmmo: 0
-    rarity: 0
-  - weaponName: 
-    damage: 0
-    fireRate: 0
-    ammo: 0
-    maxAmmo: 0
-    rarity: 0
-  - weaponName: 
-    damage: 0
-    fireRate: 0
-    ammo: 0
-    maxAmmo: 0
     rarity: 0
   _CurrentWeaponIndex: 0
   _CurrentAmmo: 0
@@ -200,7 +181,7 @@ MonoBehaviour:
   walkSpeed: 5
   sprintSpeed: 10
   crouchSpeed: 2.5
-  jumpHeight: 2
+  jumpHeight: 1
   gravity: -9.8
   cameraHolder: {fileID: 6946994393108786206}
   sensX: 0.1
