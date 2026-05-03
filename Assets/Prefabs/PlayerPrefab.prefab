@@ -103,7 +103,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   weaponHolder: {fileID: 4923008798026470637}
-  weaponPrefab: {fileID: 3134033229893152293, guid: d6b497a833bad7e46a69f09ac778e8c0, type: 3}
   shootRange: 100
   shootLayer:
     serializedVersion: 2
@@ -115,32 +114,17 @@ MonoBehaviour:
   enableShotSound: 1
   enableCameraRecoil: 1
   enableBulletTracer: 1
-  muzzlePoint: {fileID: 6161161155561842366}
+  weaponPrefabs:
+  - {fileID: 3775305187423326999, guid: abed1a6c2ddb8784dac7ef18b1bee714, type: 3}
+  - {fileID: 2199217828012269515, guid: 4181cf660de33c849920d12d17a3ff53, type: 3}
+  - {fileID: 9196423951404625928, guid: 37a8690dd3e351c49a7c92c23d12b9bd, type: 3}
+  - {fileID: 6410722792995091782, guid: f5447acb7196e3240bef34c84dc0ea29, type: 3}
   baseWeapon:
     weaponName: Pistola de Pintura
     damage: 10
-    fireRate: 0.1
-    ammo: 100
+    fireRate: 0.4
+    ammo: 50
     maxAmmo: 100
-    rarity: 0
-  specialWeapons:
-  - weaponName: 
-    damage: 0
-    fireRate: 0
-    ammo: 0
-    maxAmmo: 0
-    rarity: 0
-  - weaponName: 
-    damage: 0
-    fireRate: 0
-    ammo: 0
-    maxAmmo: 0
-    rarity: 0
-  - weaponName: 
-    damage: 0
-    fireRate: 0
-    ammo: 0
-    maxAmmo: 0
     rarity: 0
   _CurrentWeaponIndex: 0
   _CurrentAmmo: 0
@@ -197,7 +181,7 @@ MonoBehaviour:
   walkSpeed: 5
   sprintSpeed: 10
   crouchSpeed: 2.5
-  jumpHeight: 2
+  jumpHeight: 1
   gravity: -9.8
   cameraHolder: {fileID: 6946994393108786206}
   sensX: 0.1
@@ -261,13 +245,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb4498653f8d4ce468de95f6845ee8a9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _HasGrenade: 0
-  _HasAirStrike: 0
-  _HasTurret: 0
   grenadePrefab: {fileID: 173771255986698382, guid: e2354b5960c2f2f47bdb2c0addda17d6, type: 3}
   airStrikePrefab: {fileID: 4044044536491242958, guid: 80ecac6eed9c78e4ca28b587ff47e651, type: 3}
   turretPrefab: {fileID: 5488210374508796604, guid: a1feee0dcd883c14dbc41727893fa226, type: 3}
-  airStrikeIndicatorPrefab: {fileID: 6702306499538279488, guid: a8c458cc72f40a243876b8ef18019ac9, type: 3}
 --- !u!1 &3371451427661727467
 GameObject:
   m_ObjectHideFlags: 0

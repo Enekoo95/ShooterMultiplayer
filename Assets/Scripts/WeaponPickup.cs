@@ -4,31 +4,47 @@ using TMPro;
 
 public class WeaponPickup : NetworkBehaviour
 {
-    [SerializeField] private WeaponSystem.WeaponStats weaponStats;
-    [SerializeField] private float rotationSpeed = 50f;
-    [SerializeField] private float pickupRadius = 2f;
+    [Header("Configuración del arma")]
+    [SerializeField] private int weaponIndex = 1;
+
+    [SerializeField]
+    private WeaponSystem.WeaponStats weaponStats = new WeaponSystem.WeaponStats
+    {
+        weaponName = "Escopeta",
+        damage = 25,
+        fireRate = 0.5f,
+        ammo = 20,
+        maxAmmo = 20,
+        rarity = WeaponSystem.WeaponRarity.Special
+    };
+
     [SerializeField] private TextMeshPro pickupText;
+    [SerializeField] private float rotationSpeed = 50f;
 
-    [Networked] private NetworkBool IsPickedUp { get; set; }
-
-    // Cache del jugador local — evita FindObjectsOfType cada frame
-    private PlayerController localPlayer;
+    private bool localPlayerInRange = false;
     private WeaponSystem localWeaponSystem;
-    private bool isSpawned = false;
+
+    // Cooldown para evitar recoger el arma múltiples veces seguidas
+    private float pickupCooldown = 0f;
+    private const float PICKUP_COOLDOWN_TIME = 1f;
+
+    private void Awake()
+    {
+        HideText();
+    }
 
     public override void Spawned()
     {
-        isSpawned = true;
+        HideText();
+        BuscarJugadorLocal();
+    }
 
-        if (pickupText != null)
-            pickupText.gameObject.SetActive(false);
-
-        // Buscar el jugador local una sola vez al spawnear
+    private void BuscarJugadorLocal()
+    {
         foreach (PlayerController player in FindObjectsOfType<PlayerController>())
         {
             if (player.HasInputAuthority)
             {
-                localPlayer = player;
                 localWeaponSystem = player.GetComponent<WeaponSystem>();
                 break;
             }
@@ -37,64 +53,107 @@ public class WeaponPickup : NetworkBehaviour
 
     private void Update()
     {
-        if (!isSpawned || Object == null || !Object.IsValid) return;
-        if (IsPickedUp) return;
+        if (Object == null || !Object.IsValid) return;
 
-        // Rotar el objeto
+        // Rotar siempre
         transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime);
 
-        // Si no tenemos jugador local todavía, intentar encontrarlo
-        if (localPlayer == null)
+        // Bajar cooldown
+        if (pickupCooldown > 0f)
+            pickupCooldown -= Time.deltaTime;
+
+        if (!localPlayerInRange) return;
+
+        if (Input.GetKeyDown(KeyCode.F) && pickupCooldown <= 0f)
         {
-            foreach (PlayerController player in FindObjectsOfType<PlayerController>())
+            if (localWeaponSystem == null)
+                BuscarJugadorLocal();
+
+            if (localWeaponSystem != null)
             {
-                if (player.HasInputAuthority)
+                // Ocultar texto y equipar arma
+                localPlayerInRange = false;
+                HideText();
+
+                // Cooldown para que no se recoja instantáneamente de nuevo
+                pickupCooldown = PICKUP_COOLDOWN_TIME;
+
+                localWeaponSystem.PickupWeapon(weaponIndex, weaponStats);
+
+                StartCoroutine(ReactivarTrigger());
+            }
+        }
+    }
+
+    // Después del cooldown, si el jugador sigue dentro vuelve a mostrar el texto
+    private System.Collections.IEnumerator ReactivarTrigger()
+    {
+        yield return new WaitForSeconds(PICKUP_COOLDOWN_TIME);
+
+        // Comprobar si el jugador sigue dentro del trigger
+        if (localWeaponSystem != null)
+        {
+            PlayerController player = localWeaponSystem.GetComponent<PlayerController>();
+            if (player != null)
+            {
+                Collider[] cols = GetComponents<Collider>();
+                foreach (Collider col in cols)
                 {
-                    localPlayer = player;
-                    localWeaponSystem = player.GetComponent<WeaponSystem>();
+                    if (!col.isTrigger) continue;
+                    // Comprobar distancia manualmente ya que no podemos re-disparar OnTriggerEnter
+                    float dist = Vector3.Distance(transform.position, player.transform.position);
+                    SphereCollider sc = col as SphereCollider;
+                    float radius = sc != null ? sc.radius : 2f;
+                    if (dist <= radius)
+                    {
+                        localPlayerInRange = true;
+                        if (pickupText != null)
+                            pickupText.gameObject.SetActive(true);
+                    }
                     break;
                 }
             }
-            return;
         }
+    }
 
-        float dist = Vector3.Distance(transform.position, localPlayer.transform.position);
-        bool playerNearby = dist <= pickupRadius;
-
+    private void HideText()
+    {
         if (pickupText != null)
-            pickupText.gameObject.SetActive(playerNearby);
-
-        if (playerNearby && Input.GetKeyDown(KeyCode.F))
-        {
-            if (localWeaponSystem != null)
-            {
-                localWeaponSystem.PickupWeapon(weaponStats);
-                RPC_PickupWeapon();
-            }
-        }
+            pickupText.gameObject.SetActive(false);
     }
 
-    public override void Despawned(NetworkRunner runner, bool hasState)
+    private void OnTriggerEnter(Collider other)
     {
-        isSpawned = false;
+        PlayerController player = other.GetComponentInParent<PlayerController>();
+        if (player == null || !player.HasInputAuthority) return;
+
+        if (localWeaponSystem == null)
+            BuscarJugadorLocal();
+
+        localPlayerInRange = true;
+        if (pickupText != null)
+            pickupText.gameObject.SetActive(true);
     }
 
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_PickupWeapon()
+    private void OnTriggerExit(Collider other)
     {
-        IsPickedUp = true;
-        RPC_HideForAll();
-    }
+        PlayerController player = other.GetComponentInParent<PlayerController>();
+        if (player == null || !player.HasInputAuthority) return;
 
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    private void RPC_HideForAll()
-    {
-        gameObject.SetActive(false);
+        localPlayerInRange = false;
+        HideText();
     }
 
     private void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, pickupRadius);
+        Collider[] cols = GetComponents<Collider>();
+        foreach (Collider col in cols)
+        {
+            if (col.isTrigger)
+            {
+                Gizmos.color = new Color(1f, 1f, 0f, 0.3f);
+                Gizmos.DrawSphere(transform.position, col is SphereCollider sc ? sc.radius : 2f);
+            }
+        }
     }
 }

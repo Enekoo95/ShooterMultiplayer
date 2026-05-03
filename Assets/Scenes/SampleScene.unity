@@ -521,11 +521,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3498710447741226315, guid: f96a0091d04e5914a9aa3a46bdc330d2, type: 3}
       propertyPath: SortKey
-      value: 1764873359
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3498710447741226315, guid: f96a0091d04e5914a9aa3a46bdc330d2, type: 3}
       propertyPath: NetworkedBehaviours.Array.size
-      value: 2
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 8202655873894363412, guid: f96a0091d04e5914a9aa3a46bdc330d2, type: 3}
       propertyPath: shootOrigin
@@ -634,3 +634,4 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 945495873}
+  - {fileID: 1299416340}
