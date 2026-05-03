@@ -776,7 +776,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 703237169}
+      - m_Target: {fileID: 346577501}
         m_TargetAssemblyTypeName: PauseMenu, Assembly-CSharp
         m_MethodName: QuitGame
         m_Mode: 1
@@ -1920,6 +1920,7 @@ GameObject:
   - component: {fileID: 346577497}
   - component: {fileID: 346577496}
   - component: {fileID: 346577500}
+  - component: {fileID: 346577501}
   m_Layer: 5
   m_Name: ScoredboardCanvas
   m_TagString: Untagged
@@ -1988,7 +1989,7 @@ Canvas:
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 10
   m_TargetDisplay: 0
 --- !u!224 &346577499
 RectTransform:
@@ -2027,6 +2028,19 @@ MonoBehaviour:
   titleText: {fileID: 289007311}
   playerListContainer: {fileID: 1398264797}
   playerEntryPrefab: {fileID: 7938809490761259603, guid: 8ecf90c2cdfdc7e479d3b7dae48e5258, type: 3}
+--- !u!114 &346577501
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 346577495}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c22b553ab1c9d8b4aa5fec9a06ba8cad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pausePanel: {fileID: 703237167}
 --- !u!1001 &349043372
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2855,7 +2869,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 703237169}
+      - m_Target: {fileID: 346577501}
         m_TargetAssemblyTypeName: PauseMenu, Assembly-CSharp
         m_MethodName: Resume
         m_Mode: 1
@@ -3264,7 +3278,6 @@ GameObject:
   - component: {fileID: 703237168}
   - component: {fileID: 703237171}
   - component: {fileID: 703237170}
-  - component: {fileID: 703237169}
   m_Layer: 5
   m_Name: PausePanel
   m_TagString: Untagged
@@ -3293,19 +3306,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &703237169
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 703237167}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c22b553ab1c9d8b4aa5fec9a06ba8cad, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  pausePanel: {fileID: 703237167}
 --- !u!114 &703237170
 MonoBehaviour:
   m_ObjectHideFlags: 0

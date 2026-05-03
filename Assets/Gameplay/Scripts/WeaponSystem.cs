@@ -105,6 +105,7 @@ public class WeaponSystem : NetworkBehaviour
     public override void FixedUpdateNetwork()
     {
         if (!HasInputAuthority) return;
+        if (PauseMenu.IsPaused) return;
 
         if (playerController == null)
         {
@@ -158,15 +159,10 @@ public class WeaponSystem : NetworkBehaviour
             break;
         }
 
-
-        if (!Runner.IsResimulation)
-            OnShot(origin, endPoint);
+        OnShot(origin, endPoint);
     }
 
-    private bool CanShoot()
-    {
-        return (float)Runner.SimulationTime - LastShotTime >= currentWeapon.fireRate;
-    }
+    private bool CanShoot() => (float)Runner.SimulationTime - LastShotTime >= currentWeapon.fireRate;
 
     private void CycleWeapon()
     {
@@ -182,13 +178,11 @@ public class WeaponSystem : NetworkBehaviour
 
         CurrentWeaponIndex = index;
         CurrentAmmo = currentWeapon.maxAmmo;
-        Debug.Log($"[WeaponSystem] Arma equipada: {currentWeapon.weaponName}");
     }
 
     private void Reload()
     {
         CurrentAmmo = currentWeapon.maxAmmo;
-        Debug.Log($"[WeaponSystem] Recargando... Munición: {CurrentAmmo}");
     }
 
     private void OnShot(Vector3 rayOrigin, Vector3 rayEnd)
@@ -236,18 +230,13 @@ public class WeaponSystem : NetworkBehaviour
             mat.color = new Color(1f, 0.95f, 0.6f, 0.8f);
             lr.material = mat;
         }
-
         Destroy(tracer, 0.04f);
     }
 
     private System.Collections.IEnumerator ApplyRecoilCoroutine()
     {
         Vector3 originalPos = playerCamera.transform.localPosition;
-        Vector3 recoilDir = new Vector3(
-            Random.Range(-recoilAmount, recoilAmount),
-            Random.Range(-recoilAmount, recoilAmount),
-            -recoilAmount * 0.5f
-        );
+        Vector3 recoilDir = new Vector3(Random.Range(-recoilAmount, recoilAmount), Random.Range(-recoilAmount, recoilAmount), -recoilAmount * 0.5f);
         Vector3 targetPos = originalPos + recoilDir;
         float elapsed = 0f;
 

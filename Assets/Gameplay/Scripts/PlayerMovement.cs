@@ -12,7 +12,7 @@ public class PlayerMovement : NetworkBehaviour
 
     [Header("Salto y Gravedad")]
     [SerializeField] private float jumpHeight = 1.2f;
-    [SerializeField] private float gravity = -20f; // Sugerido -20 para mejor sensación
+    [SerializeField] private float gravity = -20f;
 
     [Header("Camara FPS")]
     [SerializeField] private Transform cameraHolder;
@@ -26,7 +26,7 @@ public class PlayerMovement : NetworkBehaviour
     [SerializeField] private float crouchTransitionSpeed = 8f;
 
     [Header("Ground Check")]
-    [SerializeField] private float groundCheckDistance = 0.3f; // Aumentado para fiabilidad
+    [SerializeField] private float groundCheckDistance = 0.3f;
     [SerializeField] private LayerMask groundMask;
 
     [Networked] private NetworkBool IsGrounded { get; set; }
@@ -62,12 +62,10 @@ public class PlayerMovement : NetworkBehaviour
     public override void FixedUpdateNetwork()
     {
         if (!GetInput(out PlayerInput input)) return;
+        if (PauseMenu.IsPaused) return;
 
-        // Reset local pos para el crouch lerp visual si es necesario
         if (cameraHolder != null)
-        {
             cameraHolder.localPosition = cameraInitialLocalPos;
-        }
 
         GroundCheck();
         HandleCrouch(input);
@@ -80,10 +78,7 @@ public class PlayerMovement : NetworkBehaviour
 
     private void GroundCheck()
     {
-        // Calculamos la base del CharacterController de forma precisa
         Vector3 spherePos = transform.position + cc.center + (Vector3.down * (cc.height / 2f));
-
-        // El radio debe ser suficiente para superar el 'Skin Width' del CC
         IsGrounded = Physics.CheckSphere(spherePos, groundCheckDistance, groundMask, QueryTriggerInteraction.Ignore);
     }
 
@@ -106,20 +101,15 @@ public class PlayerMovement : NetworkBehaviour
                     : walkSpeed;
 
         Vector3 move = transform.right * input.Move.x + transform.forward * input.Move.y;
-
         if (move.magnitude > 1f) move.Normalize();
-
         horizontalVelocity = move * speed;
     }
 
     private void HandleJump(PlayerInput input)
     {
-        // Solo saltar si el input es verdadero Y estamos en el suelo
         if (input.Jump && IsGrounded && !IsCrouching)
         {
             verticalVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-
-            // Forzamos el estado de suelo a falso para evitar impulsos dobles
             IsGrounded = false;
         }
     }
@@ -127,19 +117,13 @@ public class PlayerMovement : NetworkBehaviour
     private void ApplyGravity()
     {
         if (IsGrounded && verticalVelocity.y < 0f)
-        {
-            // Pequeña fuerza negativa para mantener el contacto con el suelo
             verticalVelocity.y = -2f;
-        }
         else
-        {
             verticalVelocity.y += gravity * Runner.DeltaTime;
-        }
     }
 
     private void MoveCharacter()
     {
-        // Combinamos ambas velocidades y aplicamos el movimiento
         cc.Move((horizontalVelocity + verticalVelocity) * Runner.DeltaTime);
     }
 
@@ -149,11 +133,9 @@ public class PlayerMovement : NetworkBehaviour
 
         float previousHeight = cc.height;
         float targetHeight = IsCrouching ? crouchHeight : normalHeight;
-
         float newHeight = Mathf.Lerp(previousHeight, targetHeight, crouchTransitionSpeed * Runner.DeltaTime);
         cc.height = newHeight;
 
-        // Ajustamos el centro para que el personaje no se hunda o flote al agacharse
         float heightDifference = newHeight - previousHeight;
         cc.center += new Vector3(0f, heightDifference / 2f, 0f);
     }
@@ -161,7 +143,6 @@ public class PlayerMovement : NetworkBehaviour
     private void OnDrawGizmosSelected()
     {
         if (cc == null) cc = GetComponent<CharacterController>();
-
         Gizmos.color = IsGrounded ? Color.green : Color.red;
         Vector3 p = transform.position + cc.center + (Vector3.down * (cc.height / 2f));
         Gizmos.DrawWireSphere(p, groundCheckDistance);
