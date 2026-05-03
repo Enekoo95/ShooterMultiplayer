@@ -17,7 +17,6 @@ public class WeaponSystem : NetworkBehaviour
     public enum WeaponRarity { Common, Special, Epic }
 
     [SerializeField] private Transform weaponHolder;
-    [SerializeField] private GameObject weaponPrefab;
     [SerializeField] private float shootRange = 100f;
     [SerializeField] private LayerMask shootLayer;
     [SerializeField] private AudioClip shotSound;
@@ -27,12 +26,16 @@ public class WeaponSystem : NetworkBehaviour
     [SerializeField] private bool enableShotSound = true;
     [SerializeField] private bool enableCameraRecoil = true;
     [SerializeField] private bool enableBulletTracer = true;
-    [SerializeField] private Transform muzzlePoint;
 
+    [Header("Modelos visuales — índice 0=pistola, 1=escopeta, 2=rifle, 3=sniper")]
+    [SerializeField] private GameObject[] weaponPrefabs;
+
+    // Stats del arma base — configurable en el Inspector
+    [Header("Arma base (pistola)")]
     [SerializeField]
     private WeaponStats baseWeapon = new WeaponStats
     {
-        weaponName = "Pistola de Pintura",
+        weaponName = "Pistola",
         damage = 10,
         fireRate = 0.1f,
         ammo = 100,
@@ -40,12 +43,14 @@ public class WeaponSystem : NetworkBehaviour
         rarity = WeaponRarity.Common
     };
 
-    [SerializeField] private WeaponStats[] specialWeapons = new WeaponStats[3];
+    private Transform[] muzzlePoints;
+    private GameObject[] weaponInstances;
 
     [Networked] public int CurrentWeaponIndex { get; set; }
     [Networked] public int CurrentAmmo { get; set; }
     [Networked] public float LastShotTime { get; set; }
 
+    // Stats actuales — se reemplazan al recoger un arma
     private WeaponStats currentWeapon;
     private PlayerController playerController;
     private Camera playerCamera;
@@ -57,7 +62,6 @@ public class WeaponSystem : NetworkBehaviour
         if (initialized) return;
         initialized = true;
 
-        InitializeSpecialWeapons();
         currentWeapon = DeepCopyWeapon(baseWeapon);
 
         playerController = GetComponentInParent<PlayerController>();
@@ -75,11 +79,25 @@ public class WeaponSystem : NetworkBehaviour
         if (audioSource == null)
             audioSource = gameObject.AddComponent<AudioSource>();
 
-        if (weaponPrefab != null && weaponHolder != null && HasInputAuthority)
+        if (weaponPrefabs != null && weaponHolder != null && HasInputAuthority)
         {
-            GameObject weaponInstance = Instantiate(weaponPrefab, weaponHolder);
-            weaponInstance.transform.localPosition = Vector3.zero;
-            weaponInstance.transform.localRotation = Quaternion.identity;
+            weaponInstances = new GameObject[weaponPrefabs.Length];
+            muzzlePoints = new Transform[weaponPrefabs.Length];
+
+            for (int i = 0; i < weaponPrefabs.Length; i++)
+            {
+                if (weaponPrefabs[i] == null) continue;
+
+                GameObject instance = Instantiate(weaponPrefabs[i], weaponHolder);
+                instance.transform.localPosition = Vector3.zero;
+                instance.transform.localRotation = Quaternion.identity;
+                weaponInstances[i] = instance;
+
+                Transform mp = instance.transform.Find("MuzzlePoint");
+                muzzlePoints[i] = mp;
+
+                instance.SetActive(i == 0);
+            }
         }
     }
 
@@ -91,15 +109,8 @@ public class WeaponSystem : NetworkBehaviour
         if (HasStateAuthority)
         {
             CurrentAmmo = currentWeapon.maxAmmo;
-            Debug.Log($"[WeaponSystem] Spawned con arma: {currentWeapon.weaponName}, Munición: {CurrentAmmo}");
+            Debug.Log($"[WeaponSystem] Spawned con: {currentWeapon.weaponName}");
         }
-    }
-
-    private void InitializeSpecialWeapons()
-    {
-        specialWeapons[0] = new WeaponStats { weaponName = "Escopeta de Pintura", damage = 25, fireRate = 0.5f, ammo = 20, maxAmmo = 20, rarity = WeaponRarity.Special };
-        specialWeapons[1] = new WeaponStats { weaponName = "Rifle de Pintura", damage = 30, fireRate = 0.2f, ammo = 50, maxAmmo = 50, rarity = WeaponRarity.Special };
-        specialWeapons[2] = new WeaponStats { weaponName = "Lanzador de Pintura", damage = 40, fireRate = 1f, ammo = 10, maxAmmo = 10, rarity = WeaponRarity.Epic };
     }
 
     public override void FixedUpdateNetwork()
@@ -116,7 +127,6 @@ public class WeaponSystem : NetworkBehaviour
         if (!playerController.IsAlive) return;
         if (!GetInput(out PlayerInput input)) return;
 
-        if (input.CycleWeapon) CycleWeapon();
         if (input.Shoot && CanShoot()) Shoot();
         if (input.Reload) Reload();
     }
@@ -149,7 +159,6 @@ public class WeaponSystem : NetworkBehaviour
 
             if (target != null)
             {
-                Debug.Log($"[WeaponSystem] Dañando a {target.name}");
                 target.RPC_TakeDamage(currentWeapon.damage, Runner.LocalPlayer);
                 endPoint = hit.point;
                 break;
@@ -159,30 +168,40 @@ public class WeaponSystem : NetworkBehaviour
             break;
         }
 
-        OnShot(origin, endPoint);
+        if (!Runner.IsResimulation)
+            OnShot(origin, endPoint);
     }
 
     private bool CanShoot() => (float)Runner.SimulationTime - LastShotTime >= currentWeapon.fireRate;
 
-    private void CycleWeapon()
+    // FIX: acepta el índice del modelo Y las stats del pickup
+    public void PickupWeapon(int index, WeaponStats stats)
     {
-        CurrentWeaponIndex = (CurrentWeaponIndex + 1) % 4;
-        EquipWeapon(CurrentWeaponIndex);
-    }
+        if (!HasInputAuthority) return;
+        if (index < 0 || (weaponPrefabs != null && index >= weaponPrefabs.Length)) return;
 
-    public void EquipWeapon(int index)
-    {
-        currentWeapon = index == 0
-            ? DeepCopyWeapon(baseWeapon)
-            : DeepCopyWeapon(specialWeapons[Mathf.Clamp(index - 1, 0, specialWeapons.Length - 1)]);
-
+        // Usar las stats del pickup tal cual — cada arma del suelo tiene las suyas
+        currentWeapon = DeepCopyWeapon(stats);
         CurrentWeaponIndex = index;
-        CurrentAmmo = currentWeapon.maxAmmo;
+        CurrentAmmo = stats.maxAmmo;
+
+        // Cambiar modelo visual
+        if (weaponInstances != null)
+        {
+            for (int i = 0; i < weaponInstances.Length; i++)
+            {
+                if (weaponInstances[i] != null)
+                    weaponInstances[i].SetActive(i == index);
+            }
+        }
+
+        Debug.Log($"[WeaponSystem] Equipado: {currentWeapon.weaponName} | Daño: {currentWeapon.damage} | Cadencia: {currentWeapon.fireRate}");
     }
 
     private void Reload()
     {
         CurrentAmmo = currentWeapon.maxAmmo;
+        Debug.Log($"[WeaponSystem] Recargando {currentWeapon.weaponName}...");
     }
 
     private void OnShot(Vector3 rayOrigin, Vector3 rayEnd)
@@ -192,15 +211,17 @@ public class WeaponSystem : NetworkBehaviour
 
         if (enableMuzzleFlash)
         {
-            Transform flashOrigin = muzzlePoint != null ? muzzlePoint
-                                  : weaponHolder != null ? weaponHolder
-                                  : transform;
+            Transform muzzle = null;
+            if (muzzlePoints != null && CurrentWeaponIndex < muzzlePoints.Length)
+                muzzle = muzzlePoints[CurrentWeaponIndex];
+            if (muzzle == null)
+                muzzle = weaponHolder != null ? weaponHolder : transform;
 
             Quaternion flashRotation = playerCamera != null
                 ? Quaternion.LookRotation(playerCamera.transform.forward, playerCamera.transform.up)
-                : flashOrigin.rotation;
+                : muzzle.rotation;
 
-            MuzzleFlashEffect.CreateMuzzleFlash(flashOrigin.position, flashRotation, 0.1f, flashOrigin);
+            MuzzleFlashEffect.CreateMuzzleFlash(muzzle.position, flashRotation, 0.1f, muzzle);
         }
 
         if (enableBulletTracer && HasInputAuthority)
@@ -270,11 +291,4 @@ public class WeaponSystem : NetworkBehaviour
         maxAmmo = src.maxAmmo,
         rarity = src.rarity
     };
-
-    public void PickupWeapon(WeaponStats weapon)
-    {
-        if (!HasInputAuthority) return;
-        EquipWeapon(CurrentWeaponIndex + 1);
-        Debug.Log($"[WeaponSystem] Recogido: {weapon.weaponName}");
-    }
 }
