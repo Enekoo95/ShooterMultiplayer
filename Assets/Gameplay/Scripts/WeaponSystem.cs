@@ -27,8 +27,6 @@ public class WeaponSystem : NetworkBehaviour
     [SerializeField] private bool enableShotSound = true;
     [SerializeField] private bool enableCameraRecoil = true;
     [SerializeField] private bool enableBulletTracer = true;
-
-
     [SerializeField] private Transform muzzlePoint;
 
     [SerializeField]
@@ -99,33 +97,9 @@ public class WeaponSystem : NetworkBehaviour
 
     private void InitializeSpecialWeapons()
     {
-        specialWeapons[0] = new WeaponStats
-        {
-            weaponName = "Escopeta de Pintura",
-            damage = 25,
-            fireRate = 0.5f,
-            ammo = 20,
-            maxAmmo = 20,
-            rarity = WeaponRarity.Special
-        };
-        specialWeapons[1] = new WeaponStats
-        {
-            weaponName = "Rifle de Pintura",
-            damage = 30,
-            fireRate = 0.2f,
-            ammo = 50,
-            maxAmmo = 50,
-            rarity = WeaponRarity.Special
-        };
-        specialWeapons[2] = new WeaponStats
-        {
-            weaponName = "Lanzador de Pintura",
-            damage = 40,
-            fireRate = 1f,
-            ammo = 10,
-            maxAmmo = 10,
-            rarity = WeaponRarity.Epic
-        };
+        specialWeapons[0] = new WeaponStats { weaponName = "Escopeta de Pintura", damage = 25, fireRate = 0.5f, ammo = 20, maxAmmo = 20, rarity = WeaponRarity.Special };
+        specialWeapons[1] = new WeaponStats { weaponName = "Rifle de Pintura", damage = 30, fireRate = 0.2f, ammo = 50, maxAmmo = 50, rarity = WeaponRarity.Special };
+        specialWeapons[2] = new WeaponStats { weaponName = "Lanzador de Pintura", damage = 40, fireRate = 1f, ammo = 10, maxAmmo = 10, rarity = WeaponRarity.Epic };
     }
 
     public override void FixedUpdateNetwork()
@@ -184,7 +158,9 @@ public class WeaponSystem : NetworkBehaviour
             break;
         }
 
-        OnShot(origin, endPoint);
+
+        if (!Runner.IsResimulation)
+            OnShot(origin, endPoint);
     }
 
     private bool CanShoot()
@@ -230,12 +206,7 @@ public class WeaponSystem : NetworkBehaviour
                 ? Quaternion.LookRotation(playerCamera.transform.forward, playerCamera.transform.up)
                 : flashOrigin.rotation;
 
-            MuzzleFlashEffect.CreateMuzzleFlash(
-                flashOrigin.position,
-                flashRotation,
-                0.1f,
-                flashOrigin
-            );
+            MuzzleFlashEffect.CreateMuzzleFlash(flashOrigin.position, flashRotation, 0.1f, flashOrigin);
         }
 
         if (enableBulletTracer && HasInputAuthority)
@@ -245,12 +216,10 @@ public class WeaponSystem : NetworkBehaviour
             StartCoroutine(ApplyRecoilCoroutine());
     }
 
-
     private void ShowBulletTracer(Vector3 from, Vector3 to)
     {
         GameObject tracer = new GameObject("BulletTracer");
         LineRenderer lr = tracer.AddComponent<LineRenderer>();
-
         lr.startWidth = 0.02f;
         lr.endWidth = 0.004f;
         lr.positionCount = 2;
@@ -260,13 +229,11 @@ public class WeaponSystem : NetworkBehaviour
         lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         lr.receiveShadows = false;
 
-        Shader shader = Shader.Find("Unlit/Color")
-                     ?? Shader.Find("Legacy Shaders/Particles/Additive");
-
+        Shader shader = Shader.Find("Unlit/Color") ?? Shader.Find("Legacy Shaders/Particles/Additive");
         if (shader != null)
         {
             Material mat = new Material(shader);
-            mat.color = new Color(1f, 0.95f, 0.6f, 0.8f); 
+            mat.color = new Color(1f, 0.95f, 0.6f, 0.8f);
             lr.material = mat;
         }
 
