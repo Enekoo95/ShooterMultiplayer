@@ -4,31 +4,43 @@ using TMPro;
 
 public class WeaponPickup : NetworkBehaviour
 {
-    [SerializeField] private WeaponSystem.WeaponStats weaponStats;
-    [SerializeField] private float rotationSpeed = 50f;
-    [SerializeField] private float pickupRadius = 2f;
+    [Header("Configuración del arma")]
+    [SerializeField] private int weaponIndex = 1;
+
+    [SerializeField]
+    private WeaponSystem.WeaponStats weaponStats = new WeaponSystem.WeaponStats
+    {
+        weaponName = "Escopeta",
+        damage = 25,
+        fireRate = 0.5f,
+        ammo = 20,
+        maxAmmo = 20,
+        rarity = WeaponSystem.WeaponRarity.Special
+    };
+
     [SerializeField] private TextMeshPro pickupText;
+    [SerializeField] private float rotationSpeed = 50f;
 
-    [Networked] private NetworkBool IsPickedUp { get; set; }
-
-    // Cache del jugador local — evita FindObjectsOfType cada frame
-    private PlayerController localPlayer;
+    private bool localPlayerInRange = false;
     private WeaponSystem localWeaponSystem;
-    private bool isSpawned = false;
+
+    private void Awake()
+    {
+        HideText();
+    }
 
     public override void Spawned()
     {
-        isSpawned = true;
+        HideText();
+        BuscarJugadorLocal();
+    }
 
-        if (pickupText != null)
-            pickupText.gameObject.SetActive(false);
-
-        // Buscar el jugador local una sola vez al spawnear
+    private void BuscarJugadorLocal()
+    {
         foreach (PlayerController player in FindObjectsOfType<PlayerController>())
         {
             if (player.HasInputAuthority)
             {
-                localPlayer = player;
                 localWeaponSystem = player.GetComponent<WeaponSystem>();
                 break;
             }
@@ -37,64 +49,67 @@ public class WeaponPickup : NetworkBehaviour
 
     private void Update()
     {
-        if (!isSpawned || Object == null || !Object.IsValid) return;
-        if (IsPickedUp) return;
+        if (Object == null || !Object.IsValid) return;
 
-        // Rotar el objeto
+        // Rotar siempre
         transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime);
 
-        // Si no tenemos jugador local todavía, intentar encontrarlo
-        if (localPlayer == null)
+        if (!localPlayerInRange) return;
+
+        if (Input.GetKeyDown(KeyCode.F))
         {
-            foreach (PlayerController player in FindObjectsOfType<PlayerController>())
-            {
-                if (player.HasInputAuthority)
-                {
-                    localPlayer = player;
-                    localWeaponSystem = player.GetComponent<WeaponSystem>();
-                    break;
-                }
-            }
-            return;
-        }
+            if (localWeaponSystem == null)
+                BuscarJugadorLocal();
 
-        float dist = Vector3.Distance(transform.position, localPlayer.transform.position);
-        bool playerNearby = dist <= pickupRadius;
-
-        if (pickupText != null)
-            pickupText.gameObject.SetActive(playerNearby);
-
-        if (playerNearby && Input.GetKeyDown(KeyCode.F))
-        {
             if (localWeaponSystem != null)
             {
-                localWeaponSystem.PickupWeapon(weaponStats);
-                RPC_PickupWeapon();
+                localPlayerInRange = false;
+                HideText();
+
+                localWeaponSystem.PickupWeapon(weaponIndex, weaponStats);
             }
         }
     }
 
-    public override void Despawned(NetworkRunner runner, bool hasState)
+    private void HideText()
     {
-        isSpawned = false;
+        if (pickupText != null)
+            pickupText.gameObject.SetActive(false);
     }
 
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_PickupWeapon()
+    private void OnTriggerEnter(Collider other)
     {
-        IsPickedUp = true;
-        RPC_HideForAll();
+        PlayerController player = other.GetComponentInParent<PlayerController>();
+        if (player == null || !player.HasInputAuthority) return;
+
+        // Asegurarse de tener referencia al entrar
+        if (localWeaponSystem == null)
+            BuscarJugadorLocal();
+
+        localPlayerInRange = true;
+        if (pickupText != null)
+            pickupText.gameObject.SetActive(true);
     }
 
-    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    private void RPC_HideForAll()
+    private void OnTriggerExit(Collider other)
     {
-        gameObject.SetActive(false);
+        PlayerController player = other.GetComponentInParent<PlayerController>();
+        if (player == null || !player.HasInputAuthority) return;
+
+        localPlayerInRange = false;
+        HideText();
     }
 
     private void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, pickupRadius);
+        Collider[] cols = GetComponents<Collider>();
+        foreach (Collider col in cols)
+        {
+            if (col.isTrigger)
+            {
+                Gizmos.color = new Color(1f, 1f, 0f, 0.3f);
+                Gizmos.DrawSphere(transform.position, col is SphereCollider sc ? sc.radius : 2f);
+            }
+        }
     }
 }

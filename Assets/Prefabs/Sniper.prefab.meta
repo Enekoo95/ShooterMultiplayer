@@ -1,10 +1,7 @@
 fileFormatVersion: 2
 guid: 9f00ea1c131937546bc57c12362d386d
-PrefabImporter:
-  externalObjects: {}
-  userData: 
-  assetBundleName: 
-  assetBundleVariant: 
+labels:
+- FusionPrefab
 AssetOrigin:
   serializedVersion: 1
   productId: 254467
@@ -12,3 +9,8 @@ AssetOrigin:
   packageVersion: 1.0
   assetPath: Assets/LowPolyShooterPack/Prefabs/Weapons&Grenades/Sniper.prefab
   uploadId: 595490
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
