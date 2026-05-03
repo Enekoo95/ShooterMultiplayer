@@ -8,60 +8,81 @@ public class WeaponPickup : NetworkBehaviour
     [SerializeField] private float rotationSpeed = 50f;
     [SerializeField] private float pickupRadius = 2f;
     [SerializeField] private TextMeshPro pickupText;
-    [Networked] private bool isPickedUp { get; set; }
 
-    private void Start()
+    [Networked] private NetworkBool IsPickedUp { get; set; }
+
+    // Cache del jugador local — evita FindObjectsOfType cada frame
+    private PlayerController localPlayer;
+    private WeaponSystem localWeaponSystem;
+    private bool isSpawned = false;
+
+    public override void Spawned()
     {
+        isSpawned = true;
+
         if (pickupText != null)
             pickupText.gameObject.SetActive(false);
+
+        // Buscar el jugador local una sola vez al spawnear
+        foreach (PlayerController player in FindObjectsOfType<PlayerController>())
+        {
+            if (player.HasInputAuthority)
+            {
+                localPlayer = player;
+                localWeaponSystem = player.GetComponent<WeaponSystem>();
+                break;
+            }
+        }
     }
 
     private void Update()
     {
-        if (!Object.IsValid) return;
-        if (isPickedUp) return;
+        if (!isSpawned || Object == null || !Object.IsValid) return;
+        if (IsPickedUp) return;
 
+        // Rotar el objeto
         transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime);
 
-        PlayerController[] players = FindObjectsOfType<PlayerController>();
-        bool playerNearby = false;
-        foreach (PlayerController player in players)
+        // Si no tenemos jugador local todavía, intentar encontrarlo
+        if (localPlayer == null)
         {
-            if (!player.HasInputAuthority) continue;
-            float dist = Vector3.Distance(transform.position, player.transform.position);
-            if (dist <= pickupRadius)
+            foreach (PlayerController player in FindObjectsOfType<PlayerController>())
             {
-                playerNearby = true;
-                break;
+                if (player.HasInputAuthority)
+                {
+                    localPlayer = player;
+                    localWeaponSystem = player.GetComponent<WeaponSystem>();
+                    break;
+                }
             }
+            return;
         }
+
+        float dist = Vector3.Distance(transform.position, localPlayer.transform.position);
+        bool playerNearby = dist <= pickupRadius;
 
         if (pickupText != null)
             pickupText.gameObject.SetActive(playerNearby);
 
-        if (!Input.GetKeyDown(KeyCode.F)) return;
-
-        foreach (PlayerController player in players)
+        if (playerNearby && Input.GetKeyDown(KeyCode.F))
         {
-            if (!player.HasInputAuthority) continue;
-            float dist = Vector3.Distance(transform.position, player.transform.position);
-            if (dist <= pickupRadius)
+            if (localWeaponSystem != null)
             {
-                WeaponSystem weaponSystem = player.GetComponent<WeaponSystem>();
-                if (weaponSystem != null)
-                {
-                    weaponSystem.PickupWeapon(weaponStats);
-                    RPC_PickupWeapon();
-                    break;
-                }
+                localWeaponSystem.PickupWeapon(weaponStats);
+                RPC_PickupWeapon();
             }
         }
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        isSpawned = false;
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     private void RPC_PickupWeapon()
     {
-        isPickedUp = true;
+        IsPickedUp = true;
         RPC_HideForAll();
     }
 
